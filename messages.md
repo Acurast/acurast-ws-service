@@ -14,7 +14,7 @@ The main goal of the package is enable encrypted messages to transferred with as
 
 ### Websocket Transport Layer Header
 
-The Header is a fixed size 65 byte header. The first byte is split into two sections: the first section specifies the version of the protocol this package belongs to (for now only version 1 exits), the second section specifies the type of the package. This byte is followed by 32 bytes for the source public key and then another 32 bytes for the destination public key.
+The Header is a fixed size 65 byte header. The first byte is split into two sections: the first section specifies the version of the protocol this package belongs to (for now only version 1 exits, big endian), the second section specifies the type of the package, . This byte is followed by 32 bytes for the source public key and then another 32 bytes for the destination public key.
 
 .----------------------------------.
 | version                  (4 bit) |
@@ -32,16 +32,18 @@ The Header is a fixed size 65 byte header. The first byte is split into two sect
 
 ### Message Types
 
-.------.-----------.------------------------------------------------------------------------------------------------.
-| type | message   | behaviour                                                                                      |
+.------.-----------.--------------------------------------------------------.
+| type | message   | behaviour                                              |
 :------+-----------+--------------------------------------------------------:
 | 0000 | syn       | registers the source with the proxy for                |
-|      |           | announcing its existense and start receiving messages  |
+|      |           | announcing its existense and start receiving messages. |
+|      |           | source public key is set, but destination public key   |
+|      |           | is null                                                |
 :------+-----------+--------------------------------------------------------:
-| 0001 | ack       | challenges
+| 0001 | ack       | challenges the 
 
 
-### Connection Setup
+### Connection Setup (aka handshake)
 
 0. Client A decides to connect to the Server B.
 1. Client A signalises willingness to setup a registration with a syn package to Server B.
