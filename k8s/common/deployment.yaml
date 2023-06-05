@@ -25,17 +25,17 @@ spec:
           #   - secretRef:
           #       name: __NAMESPACE_NAME__-secret
           ports:
-            - containerPort: 8000
+            - containerPort: 9001
           readinessProbe:
             httpGet:
               path: /
-              port: 8000
+              port: 9001
             initialDelaySeconds: 30
             timeoutSeconds: 30
           livenessProbe:
             httpGet:
               path: /
-              port: 8000
+              port: 9001
             initialDelaySeconds: 30
             timeoutSeconds: 30
           resources:
