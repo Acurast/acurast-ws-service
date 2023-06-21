@@ -15,13 +15,13 @@ exports.parseMessage = (messagePayload, template = {}) => {
     let runner = 0
     for (let key in template) {
         const fieldLength = template[key]
-        rawMessage[key] = rawMessage.payload.slice(runner, fieldLength)
+        rawMessage[key] = rawMessage.payload.slice(runner, runner+fieldLength)
         runner += fieldLength
     }
     return rawMessage
 }
 
-exports.forgeMessage = (type, sender, recipient, payload) => {
+exports.forgeMessage = (type, sender, recipient, payload=EMPTY_PAYLOAD) => {
     return concatUint8Arrays([[type], sender, recipient, payload])
 }
 
@@ -43,18 +43,31 @@ exports.forgeChallengeMessage = (recipient, challenge, difficulty = DIFFICULTY) 
     return this.forgeMessage(exports.MESSAGE_TYPES.challenge, EMPTY_ADDRESS, recipient, concatUint8Arrays([difficulty, challenge])) // TODO adaptive difficulty
 }
 
-exports.forgeResponseMessage = (sender, challenge, nonce, signature) => {
-    return this.forgeMessage(exports.MESSAGE_TYPES.challenge, sender, EMPTY_ADDRESS, concatUint8Arrays([challenge, nonce, signature])) // TODO adaptive difficulty
+exports.forgeResponseMessage = (sender, challenge, publicKey, nonce, signature) => {
+    return this.forgeMessage(exports.MESSAGE_TYPES.response, sender, EMPTY_ADDRESS, concatUint8Arrays([challenge, publicKey, nonce, signature])) // TODO adaptive difficulty
 }
 
-exports.forgeAcceptMessage = (sender) => {
-    return this.forgeMessage(exports.MESSAGE_TYPES.accepted, EMPTY_ADDRESS, sender) 
+exports.forgeAcceptMessage = (recipient) => {
+    return this.forgeMessage(exports.MESSAGE_TYPES.accepted, EMPTY_ADDRESS, recipient) 
+}
+
+exports.forgePayloadMessage = (sender, recipient, payload) => {
+    return this.forgeMessage(exports.MESSAGE_TYPES.payload, sender, recipient, payload) 
+}
+
+exports.parseChallengeMessage = (challengeMessage) => {
+    const challengeMessageTemplate = {
+        difficulty: 16,
+        challenge: 16
+    }
+
+    return exports.parseMessage(challengeMessage, challengeMessageTemplate)
 }
 
 exports.parseResponseMessage = (responseMessage) => {
     const responseMessageTemplate = {
         challenge: 16,
-        publicKey: 33,
+        publicKey: 65,
         nonce: 16,
         signature: 64
     }
@@ -64,18 +77,21 @@ exports.parseResponseMessage = (responseMessage) => {
 
 exports.validateResponseMessage = async (responseMessage, challenge, difficulty = DIFFICULTY) => {
     if (!arrayEquals(responseMessage.challenge, challenge)) {
+        console.log("unequal challenge")
         return false
     } else {
-        const publicKeyHash = await subtle.digest(HASH_ALGORITHM, responseMessage.publicKey)
-        if (!arrayEquals(responseMessage.sender, publicKeyHash.slice(0, 49))) {
+        const publicKeyHash = new Uint8Array(await subtle.digest(HASH_ALGORITHM, responseMessage.publicKey))
+        if (!arrayEquals(responseMessage.sender, publicKeyHash.slice(0, 16))) {
+            console.log("sender and pubkeyhash no match")
             return false
         } else {
             const responseTBSPayload = concatUint8Arrays(responseMessage.challenge, responseMessage.publicKey, responseMessage.nonce)
             const difficultyHash = await subtle.digest(HASH_ALGORITHM, responseTBSPayload)
             if (!arrayGreaterThan(difficulty, difficultyHash)) {
+                console.log("difficulty too low")
                 return false
             } else {
-                const key = subtle.importKey("raw", responseMessage.publicKey, KEY_PARAMETERS, false, ['verify'])
+                const key = await subtle.importKey("raw", responseMessage.publicKey, KEY_PARAMETERS, false, ['verify'])
                 const verified = await subtle.verify(
                     SIGNATURE_PARAMETERS,
                     key,

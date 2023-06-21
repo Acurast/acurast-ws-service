@@ -3,7 +3,7 @@ const HASH_ALGORITHM = "SHA-256"
 
 exports.EMPTY_ADDRESS = new Uint8Array(16)
 exports.EMPTY_PAYLOAD = new Uint8Array(0)
-exports.DIFFICULTY = new Uint8Array(32).map(_=>255)
+exports.DIFFICULTY = new Uint8Array(16).map(_=>255)
 
 exports.toHexString = (byteArray) => {
     const chars = new Uint8Array(byteArray.length * 2)
