@@ -83,7 +83,7 @@ class AcurastClient {
             PROCESSORS[MESSAGE_TYPES.challenge] = async (message) => {
                 const challengeMessage = parseChallengeMessage(message)
                 const dummyNonce = new Uint8Array(16) // TODO pow
-                const tbsPayload = concatUint8Arrays(challengeMessage.challenge, rawPublicKey, dummyNonce)
+                const tbsPayload = concatUint8Arrays([challengeMessage.challenge, rawPublicKey, dummyNonce])
                 const signature = await subtle.sign(SIGNATURE_PARAMETERS, this.ecKeyPair.privateKey, tbsPayload)
                 this.ws.send(forgeResponseMessage(sender, challengeMessage.challenge, rawPublicKey, dummyNonce, new Uint8Array(signature)))  
             }

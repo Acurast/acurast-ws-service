@@ -85,7 +85,7 @@ exports.validateResponseMessage = async (responseMessage, challenge, difficulty 
             console.log("sender and pubkeyhash no match")
             return false
         } else {
-            const responseTBSPayload = concatUint8Arrays(responseMessage.challenge, responseMessage.publicKey, responseMessage.nonce)
+            const responseTBSPayload = concatUint8Arrays([responseMessage.challenge, responseMessage.publicKey, responseMessage.nonce])
             const difficultyHash = await subtle.digest(HASH_ALGORITHM, responseTBSPayload)
             if (!arrayGreaterThan(difficulty, difficultyHash)) {
                 console.log("difficulty too low")
