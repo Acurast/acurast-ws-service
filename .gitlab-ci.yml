@@ -6,6 +6,14 @@ include:
 variables:
   NAMESPACE: "websocket-proxy"
 
+.run_dev:
+  extends: .before_script_dev
+  only:
+    - master
+    - main
+    - develop
+    - dev
+
 
 stages:
   - build
@@ -21,7 +29,7 @@ build:
 test:
   stage: test
   script:
-    - docker run $GOOGLE_TAG bash -c "yarn run test"
+    - docker run $GOOGLE_TAG bash -c "yarn test:ci"
 
 
 publish-dev:

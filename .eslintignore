@@ -1,0 +1,11 @@
+.idea
+.history
+.dockerignore
+.gitignore
+.prettierignore
+.prettierrc
+.eslintrc.js
+.nyc_output
+dist
+node_modules
+coverage
