@@ -76,7 +76,7 @@ k8s-deploy-development-2:
   needs: ["publish-dev"]
   variables:
     IMAGE_TAG: $GOOGLE_TAG_DEV
-    NAMESPACE: $NAMESPACE-2
+    NAMESPACE: "websocket-proxy-2"
   script:
     - !reference [.deployment_script, script]
   environment: 
