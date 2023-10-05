@@ -80,7 +80,7 @@ k8s-deploy-development-2:
   script:
     - !reference [.deployment_script, script]
   environment: 
-    name: development
+    name: development-2
     url: https://websocket-proxy-2.dev.gke.papers.tech
 
 k8s-deploy-production:
