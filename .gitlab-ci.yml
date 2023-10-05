@@ -68,6 +68,21 @@ k8s-deploy-development:
     name: development
     url: https://websocket-proxy.dev.gke.papers.tech
 
+
+k8s-deploy-development-2:
+  stage: deploy
+  extends: .run_dev
+  when: manual
+  needs: ["publish-dev"]
+  variables:
+    IMAGE_TAG: $GOOGLE_TAG_DEV
+    NAMESPACE: $NAMESPACE-2
+  script:
+    - !reference [.deployment_script, script]
+  environment: 
+    name: development
+    url: https://websocket-proxy-2.dev.gke.papers.tech
+
 k8s-deploy-production:
   stage: deploy
   when: manual
