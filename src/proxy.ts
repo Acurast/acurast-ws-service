@@ -10,6 +10,7 @@ import {
 } from './processor/message-processor'
 import { V1MessageProcessor } from './processor/v1-message-processor'
 import { hexFrom } from './utils/bytes'
+import { Listener } from './peer/Listener'
 
 export class Proxy {
   private readonly processors: Record<number, MessageProcessor> = {
@@ -18,8 +19,10 @@ export class Proxy {
 
   private readonly webSockets: Map<string, WebSocket> = new Map()
   private readonly webSocketsReversed: Map<WebSocket, string> = new Map()
+  private readonly listener: Listener = new Listener(this.webSockets)
 
   public async onMessage(ws: WebSocket, bytes: Buffer): Promise<void> {
+    console.log('listener: ', this.listener)
     const message: Message | undefined = parseMessage(bytes)
     if (message === undefined) {
       this.log('Message', bytes, 'not recognized')
