@@ -20,7 +20,7 @@ export class Listener extends AbstractPeer {
     this.onNetworkMessage(await StreamUtils.fromStringToUint8Array(message))
   }
 
-  protected async run(): Promise<void> {
+  protected override async run(): Promise<void> {
     const node = await this.start()
 
     await node.handle('/forward-message', async ({ connection, stream }: any) => {
