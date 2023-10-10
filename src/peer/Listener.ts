@@ -25,7 +25,7 @@ export class Listener extends AbstractPeer {
 
     await node.handle('/forward-message', async ({ connection, stream }: any) => {
       console.log(`${node.peerId}/client-discovery: request received from ${connection.remotePeer}`)
-      StreamUtils.read(stream, this.onMessageForwarded)
+      StreamUtils.read(stream, this.onMessageForwarded.bind(this))
     })
 
     console.log('Listener ready, listening on:')
