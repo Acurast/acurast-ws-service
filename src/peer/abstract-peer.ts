@@ -1,22 +1,28 @@
-import { Libp2p, createLibp2p } from 'libp2p'
-import { PeerId } from '@libp2p/interface-peer-id'
-import { Node } from './Peer.js'
-import { webSockets } from '@libp2p/websockets'
-import { noise } from '@chainsafe/libp2p-noise'
-import { yamux } from '@chainsafe/libp2p-yamux'
-import { mplex } from '@libp2p/mplex'
-import { mdns } from '@libp2p/mdns'
+import { Peer } from './peer.js'
 import { StreamUtils } from '../utils/stream-utils.js'
 
-export abstract class AbstractPeer implements Node {
-  private node: Promise<Libp2p>
+export const dynamicLoader = async (): Promise<any> => {
+  return {
+    createLibp2p: (await import('libp2p')).createLibp2p,
+    webSockets: (await import('@libp2p/websockets')).webSockets,
+    noise: (await import('@chainsafe/libp2p-noise')).noise,
+    yamux: (await import('@chainsafe/libp2p-yamux')).yamux,
+    mplex: (await import('@libp2p/mplex')).mplex,
+    mdns: (await import('@libp2p/mdns')).mdns
+  }
+}
+
+export abstract class AbstractPeer implements Peer {
+  private node: Promise<any>
 
   constructor() {
     this.node = this.init()
     this.run()
   }
 
-  private async init(): Promise<Libp2p> {
+  private async init(): Promise<any> {
+    const { createLibp2p, webSockets, noise, yamux, mplex, mdns } = await dynamicLoader()
+
     const node = await createLibp2p({
       start: false,
       transports: [webSockets()],
@@ -41,15 +47,15 @@ export abstract class AbstractPeer implements Node {
   protected abstract run(): Promise<void>
 
   protected abstract onPeerDiscoveryHandler(evt: CustomEvent): void
-  private onPeerDiscovery(node: Libp2p) {
-    node.addEventListener('peer:discovery', (evt) => {
+  private onPeerDiscovery(node: any) {
+    node.addEventListener('peer:discovery', (evt: any) => {
       this.onPeerDiscoveryHandler(evt)
     })
   }
 
   protected abstract onPeerConnectHandler(evt: CustomEvent): void
-  private onPeerConnect(node: Libp2p): void {
-    node.addEventListener('peer:connect', async (evt) => {
+  private onPeerConnect(node: any): void {
+    node.addEventListener('peer:connect', async (evt: any) => {
       this.onPeerConnectHandler(evt)
     })
   }
@@ -59,21 +65,21 @@ export abstract class AbstractPeer implements Node {
 
     node
       .getPeers()
-      .forEach(async (peer) =>
+      .forEach(async (peer: any) =>
         StreamUtils.write(
           await node.dialProtocol(peer, protocol),
-          StreamUtils.fromUint8ArraytoString(payload)
+          await StreamUtils.fromUint8ArraytoString(payload)
         )
       )
   }
 
-  async dialProtocol(peer: PeerId, protocol: string, payload: any) {
+  async dialProtocol(peer: any, protocol: string, payload: any) {
     const node = await this.node
 
     StreamUtils.write(await node.dialProtocol(peer as any, protocol), JSON.stringify(payload))
   }
 
-  protected async start(): Promise<Libp2p> {
+  protected async start(): Promise<any> {
     const node = await this.node
     await node.start()
     return node

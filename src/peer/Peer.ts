@@ -1,4 +1,4 @@
-export interface Node {
+export interface Peer {
   stop: Function;
   broadcast: Function;
   dialProtocol: Function;

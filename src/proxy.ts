@@ -10,7 +10,7 @@ import {
 } from './processor/message-processor'
 import { V1MessageProcessor } from './processor/v1-message-processor'
 import { hexFrom } from './utils/bytes'
-import { Listener } from './peer/Listener'
+import { Listener } from './peer/listener'
 
 export class Proxy {
   private readonly processors: Record<number, MessageProcessor> = {
