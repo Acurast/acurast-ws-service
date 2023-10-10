@@ -1,5 +1,6 @@
 import { Peer } from './peer.js'
 import { StreamUtils } from '../utils/stream-utils.js'
+import { hexFrom } from '../utils/bytes.js'
 
 export const dynamicLoader = async (): Promise<any> => {
   return {
@@ -66,10 +67,7 @@ export abstract class AbstractPeer implements Peer {
     node
       .getPeers()
       .forEach(async (peer: any) =>
-        StreamUtils.write(
-          await node.dialProtocol(peer, protocol),
-          await StreamUtils.fromUint8ArraytoString(payload)
-        )
+        StreamUtils.write(await node.dialProtocol(peer, protocol), hexFrom(payload))
       )
   }
 

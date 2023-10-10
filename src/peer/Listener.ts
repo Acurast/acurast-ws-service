@@ -1,5 +1,6 @@
 import { AbstractPeer } from './abstract-peer.js'
 import { StreamUtils } from '../utils/stream-utils.js'
+import { hexTo } from '../utils/bytes.js'
 
 export class Listener extends AbstractPeer {
   private onNetworkMessage: (message: Uint8Array) => void
@@ -17,7 +18,7 @@ export class Listener extends AbstractPeer {
   }
 
   private async onMessageForwarded(message: string) {
-    this.onNetworkMessage(await StreamUtils.fromStringToUint8Array(message))
+    this.onNetworkMessage(hexTo(message))
   }
 
   protected override async run(): Promise<void> {
