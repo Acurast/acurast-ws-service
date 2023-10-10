@@ -1,6 +1,6 @@
-import { AbstractPeer } from './abstract-peer.js'
-import { StreamUtils } from '../utils/stream-utils.js'
-import { hexTo } from '../utils/bytes.js'
+import { AbstractPeer } from './abstract-peer'
+import { StreamUtils } from '../utils/stream-utils'
+import { hexTo } from '../utils/bytes'
 
 export class Listener extends AbstractPeer {
   private onNetworkMessage: (message: Uint8Array) => void

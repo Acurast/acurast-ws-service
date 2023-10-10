@@ -1,6 +1,6 @@
-import { Peer } from './peer.js'
-import { StreamUtils } from '../utils/stream-utils.js'
-import { hexFrom } from '../utils/bytes.js'
+import { Peer } from './peer'
+import { StreamUtils } from '../utils/stream-utils'
+import { hexFrom } from '../utils/bytes'
 
 export const dynamicLoader = async (): Promise<any> => {
   return {
