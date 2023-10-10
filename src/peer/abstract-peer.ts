@@ -66,15 +66,16 @@ export abstract class AbstractPeer implements Peer {
 
     node
       .getPeers()
-      .forEach(async (peer: any) =>
-        StreamUtils.write(await node.dialProtocol(peer, protocol), hexFrom(payload))
+      .forEach(
+        async (peer: any) =>
+          await StreamUtils.write(await node.dialProtocol(peer, protocol), hexFrom(payload))
       )
   }
 
   async dialProtocol(peer: any, protocol: string, payload: any) {
     const node = await this.node
 
-    StreamUtils.write(await node.dialProtocol(peer as any, protocol), JSON.stringify(payload))
+    await StreamUtils.write(await node.dialProtocol(peer as any, protocol), JSON.stringify(payload))
   }
 
   protected async start(): Promise<any> {
