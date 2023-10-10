@@ -19,7 +19,18 @@ export class Proxy {
 
   private readonly webSockets: Map<string, WebSocket> = new Map()
   private readonly webSocketsReversed: Map<WebSocket, string> = new Map()
-  private readonly listener: Listener = new Listener(this.webSockets)
+  private readonly listener: Listener = new Listener(this.onNetworkMessage.bind(this))
+
+  public onNetworkMessage(message: Uint8Array) {
+    const parsed = parseMessage(message)
+    const socket = this.webSockets.get(hexFrom(parsed?.recipient ?? new Uint8Array()))
+
+    if (!socket) {
+      return
+    }
+
+    socket.send(message)
+  }
 
   public async onMessage(ws: WebSocket, bytes: Buffer): Promise<void> {
     console.log('listener: ', this.listener)
@@ -94,7 +105,9 @@ export class Proxy {
 
     const ws: WebSocket | undefined = this.webSockets.get(recipient)
     if (ws === undefined) {
-      this.log(recipient, 'not connected')
+      if (action.message.type === 'payload') {
+        this.listener.broadcast('/forward-message', forgeMessage(action.message))
+      }
       return
     }
 

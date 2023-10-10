@@ -1,40 +1,34 @@
 import { AbstractPeer } from './abstract-peer.js'
 import { StreamUtils } from '../utils/stream-utils.js'
-import WebSocket from 'ws'
 
 export class Listener extends AbstractPeer {
-  private addressingTable: Map<string, WebSocket>
+  private onNetworkMessage: (message: Uint8Array) => void
 
-  constructor(addressingTable: Map<string, WebSocket>) {
+  constructor(onNetworkMessage: (message: Uint8Array) => void) {
     super()
-    this.addressingTable = addressingTable
+    this.onNetworkMessage = onNetworkMessage
   }
 
   protected override onPeerDiscoveryHandler(evt: CustomEvent<any>): void {
-    console.log('Peer discovered: ', evt.detail)
+    console.log('Peer discovered: ', evt.detail.id.toString())
   }
   protected override onPeerConnectHandler(evt: CustomEvent<any>): void {
-    console.log('Peer connected: ', evt.detail)
+    console.log('Peer connected: ', evt.detail.toString())
   }
 
-  private async onClientDiscovery(node: any, stream: any, id: string) {
-    // todo typings
-    if (!this.addressingTable.has(id)) {
-      return
-    }
-
-    StreamUtils.write(stream, await StreamUtils.fromUint8ArraytoString(node.peerId))
+  private async onMessageForwarded(message: string) {
+    this.onNetworkMessage(await StreamUtils.fromStringToUint8Array(message))
   }
 
   protected async run(): Promise<void> {
     const node = await this.start()
 
-    await node.handle('/client-discovery', async ({ connection, stream }: any) => {
+    await node.handle('/forward-message', async ({ connection, stream }: any) => {
       console.log(`${node.peerId}/client-discovery: request received from ${connection.remotePeer}`)
-      StreamUtils.read(stream, this.onClientDiscovery.bind(this, node, stream))
+      StreamUtils.read(stream, this.onMessageForwarded)
     })
 
-    console.log('Lisetenr ready, listening on:')
+    console.log('Listener ready, listening on:')
     node.getMultiaddrs().forEach((addr: any) => console.log(addr.toString()))
   }
 }
