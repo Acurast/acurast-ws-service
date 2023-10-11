@@ -2,16 +2,14 @@ import { Peer } from './peer'
 import { StreamUtils } from '../utils/stream-utils'
 import { hexFrom } from '../utils/bytes'
 
-const dynamicLoader = async (): Promise<any> => {
-  return {
-    createLibp2p: (await import('libp2p')).createLibp2p,
-    webSockets: (await import('@libp2p/websockets')).webSockets,
-    noise: (await import('@chainsafe/libp2p-noise')).noise,
-    yamux: (await import('@chainsafe/libp2p-yamux')).yamux,
-    mplex: (await import('@libp2p/mplex')).mplex,
-    mdns: (await import('@libp2p/mdns')).mdns
-  }
-}
+const dynamicLoader = async (): Promise<any> => ({
+  createLibp2p: (await import('libp2p')).createLibp2p,
+  webSockets: (await import('@libp2p/websockets')).webSockets,
+  noise: (await import('@chainsafe/libp2p-noise')).noise,
+  yamux: (await import('@chainsafe/libp2p-yamux')).yamux,
+  mplex: (await import('@libp2p/mplex')).mplex,
+  mdns: (await import('@libp2p/mdns')).mdns
+})
 
 export abstract class AbstractPeer implements Peer {
   private node: Promise<any>

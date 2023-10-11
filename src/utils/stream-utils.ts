@@ -2,13 +2,11 @@
 
 import { hexFrom, hexTo } from './bytes'
 
-const dynamicLoader = async (): Promise<any> => {
-  return {
-    lp: await import('it-length-prefixed'),
-    map: (await import('it-map')).default,
-    pipe: (await import('it-pipe')).pipe
-  }
-}
+const dynamicLoader = async (): Promise<any> => ({
+  lp: await import('it-length-prefixed'),
+  map: (await import('it-map')).default,
+  pipe: (await import('it-pipe')).pipe
+})
 
 export class StreamUtils {
   static async write(stream: any, message: string) {
