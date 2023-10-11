@@ -2,11 +2,11 @@
 
 import { hexFrom, hexTo } from './bytes'
 
-export const dynamicLoader = async (): Promise<any> => {
+const dynamicLoader = async (): Promise<any> => {
   return {
     lp: await import('it-length-prefixed'),
     map: (await import('it-map')).default,
-    pipe: (await import('it-pipe')).pipe,
+    pipe: (await import('it-pipe')).pipe
   }
 }
 

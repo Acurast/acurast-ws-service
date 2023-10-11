@@ -2,7 +2,7 @@ import { Peer } from './peer'
 import { StreamUtils } from '../utils/stream-utils'
 import { hexFrom } from '../utils/bytes'
 
-export const dynamicLoader = async (): Promise<any> => {
+const dynamicLoader = async (): Promise<any> => {
   return {
     createLibp2p: (await import('libp2p')).createLibp2p,
     webSockets: (await import('@libp2p/websockets')).webSockets,
