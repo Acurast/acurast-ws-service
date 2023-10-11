@@ -106,7 +106,7 @@ export class Proxy {
     const ws: WebSocket | undefined = this.webSockets.get(recipient)
     if (ws === undefined) {
       if (action.message.type === 'payload') {
-        this.listener.broadcast('/forward-message', forgeMessage(action.message))
+        await this.listener.broadcast('/forward-message', forgeMessage(action.message))
       }
       return
     }

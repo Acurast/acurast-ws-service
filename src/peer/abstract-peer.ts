@@ -53,7 +53,7 @@ export abstract class AbstractPeer implements Peer {
   }
 
   protected abstract onPeerConnectHandler(evt: CustomEvent): void
-  private onPeerConnect(node: any): void {
+  private onPeerConnect(node: any) {
     node.addEventListener('peer:connect', async (evt: any) => {
       this.onPeerConnectHandler(evt)
     })
@@ -62,27 +62,22 @@ export abstract class AbstractPeer implements Peer {
   async broadcast(protocol: string, payload: Uint8Array) {
     const node = await this.node
 
-    node
-      .getPeers()
-      .forEach(
-        async (peer: any) =>
-          await StreamUtils.write(await node.dialProtocol(peer, protocol), hexFrom(payload))
-      )
+    node.getPeers().forEach(async (peer: any) => await this.dialProtocol(peer, protocol, payload))
   }
 
-  async dialProtocol(peer: any, protocol: string, payload: any) {
+  async dialProtocol(peer: any, protocol: string, payload: Uint8Array) {
     const node = await this.node
 
-    await StreamUtils.write(await node.dialProtocol(peer as any, protocol), JSON.stringify(payload))
+    await StreamUtils.write(await node.dialProtocol(peer as any, protocol), hexFrom(payload))
   }
 
-  protected async start(): Promise<any> {
+  protected async start() {
     const node = await this.node
     await node.start()
     return node
   }
 
-  async stop(): Promise<void> {
+  async stop() {
     const node = await this.node
     await node.stop()
   }

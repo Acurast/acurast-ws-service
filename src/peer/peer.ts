@@ -1,5 +1,5 @@
 export interface Peer {
-  stop: Function;
-  broadcast: Function;
-  dialProtocol: Function;
+  stop: () => Promise<void>;
+  broadcast: (protocol: string, payload: Uint8Array) => Promise<void>;
+  dialProtocol: (peer: any, protocol: string, payload: Uint8Array) => Promise<void>;
 }
