@@ -28,7 +28,7 @@ export abstract class AbstractPeer implements Peer {
       connectionEncryption: [noise()],
       streamMuxers: [yamux(), mplex()],
       addresses: {
-        listen: ['/ip4/0.0.0.0/tcp/0/ws'] // tcp/0 means "assign a random port"
+        listen: ['/ip4/0.0.0.0/tcp/0/ws'] // tcp/0 = "assign a random port"
       },
       peerDiscovery: [
         mdns({
