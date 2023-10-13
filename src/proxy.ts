@@ -11,6 +11,7 @@ import {
 import { V1MessageProcessor } from './processor/v1-message-processor'
 import { hexFrom } from './utils/bytes'
 import { Listener } from './peer/listener'
+import { MessageScheduler } from './scheduler/message-scheduler'
 
 export class Proxy {
   private readonly processors: Record<number, MessageProcessor> = {
@@ -23,9 +24,18 @@ export class Proxy {
 
   public onNetworkMessage(message: Uint8Array) {
     const parsed = parseMessage(message)
-    const socket = this.webSockets.get(hexFrom(parsed?.recipient ?? new Uint8Array()))
+
+    if (!parsed) {
+      return
+    }
+
+    const recipient = hexFrom(parsed.recipient)
+    const socket = this.webSockets.get(recipient)
+
+    MessageScheduler.instance.cleanup()
 
     if (!socket) {
+      MessageScheduler.instance.add(recipient, { message, timestamp: Date.now() })
       return
     }
 
@@ -86,8 +96,11 @@ export class Proxy {
         await this.send(ws, action.message)
       } catch (error) {
         console.error(error)
+        return
       }
     }
+
+    MessageScheduler.instance.getAll(sender)?.forEach((msg) => ws.send(msg.message))
   }
 
   private async onRespond(action: RespondProcessorAction, ws: WebSocket): Promise<void> {
