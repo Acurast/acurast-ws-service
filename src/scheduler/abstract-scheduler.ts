@@ -1,4 +1,4 @@
-import { SchedulerElement } from './message-element'
+import { SchedulerElement } from './scheduler-element'
 
 export abstract class AbstractScheduler<T extends SchedulerElement> {
   private queue: Map<string, T[]> = new Map()

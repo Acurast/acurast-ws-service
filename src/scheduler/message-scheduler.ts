@@ -1,5 +1,5 @@
 import { AbstractScheduler } from './abstract-scheduler'
-import { MessageElement } from './message-element'
+import { MessageElement } from './scheduler-element'
 
 export class MessageScheduler extends AbstractScheduler<MessageElement> {
   private static _instance: MessageScheduler = new MessageScheduler()
