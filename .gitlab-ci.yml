@@ -5,21 +5,14 @@ include:
 
 variables:
   NAMESPACE: "websocket-proxy"
-
-.run_dev:
-  extends: .before_script_dev
-  only:
-    - master
-    - main
-    - develop
-    - dev
+  ANSIBLE_HOST_KEY_CHECKING: 'false'
+  ANSIBLE_FORCE_COLOR: 'true'
 
 
 stages:
   - build
   - test
-  - publish
-  - deploy
+  - run-ansible
 
 
 build:
@@ -32,66 +25,114 @@ test:
     - docker run $GOOGLE_TAG bash -c "yarn test:ci"
 
 
-publish-dev:
-  stage: publish
-  extends: .publish-dev
+# publish-dev:
+#   stage: publish
+#   extends: .publish-dev
 
-publish-prod:
-  stage: publish
-  extends: .publish-prod
-
-
-.deployment_script:
-  script:
-    # seds
-    - find k8s -type f -name \*.yaml -exec sed -i "s|__NAMESPACE_NAME__|"$NAMESPACE"|g" {} +
-    - find k8s -type f -name \*.yaml -exec sed -i "s|__TO_BE_REPLACED_BY_IMAGE_TAG__|"$IMAGE_TAG"|g" {} +
-
-    # applying the files
-    - kubectl apply -f k8s/common/namespace.yaml
-    # - kubectl apply -f k8s/common/secret.yaml
-    - kubectl apply -f k8s/$CI_ENVIRONMENT_NAME/ --recursive
-    - kubectl apply -f k8s/common/ --recursive
+# publish-prod:
+#   stage: publish
+#   extends: .publish-prod
 
 
+# .deployment_script:
+#   script:
+#     # seds
+#     - find k8s -type f -name \*.yaml -exec sed -i "s|__NAMESPACE_NAME__|"$NAMESPACE"|g" {} +
+#     - find k8s -type f -name \*.yaml -exec sed -i "s|__TO_BE_REPLACED_BY_IMAGE_TAG__|"$IMAGE_TAG"|g" {} +
 
-k8s-deploy-development:
-  stage: deploy
+#     # applying the files
+#     - kubectl apply -f k8s/common/namespace.yaml
+#     # - kubectl apply -f k8s/common/secret.yaml
+#     - kubectl apply -f k8s/$CI_ENVIRONMENT_NAME/ --recursive
+#     - kubectl apply -f k8s/common/ --recursive
+
+
+
+# k8s-deploy-development:
+#   stage: deploy
+#   extends: .run_dev
+#   when: manual
+#   needs: ["publish-dev"]
+#   variables:
+#     IMAGE_TAG: $GOOGLE_TAG_DEV
+#   script:
+#     - !reference [.deployment_script, script]
+#   environment: 
+#     name: development
+#     url: https://websocket-proxy.dev.gke.papers.tech
+
+
+# k8s-deploy-development-2:
+#   stage: deploy
+#   extends: .run_dev
+#   when: manual
+#   needs: ["publish-dev"]
+#   variables:
+#     IMAGE_TAG: $GOOGLE_TAG_DEV
+#     NAMESPACE: "websocket-proxy-2"
+#   script:
+#     - !reference [.deployment_script, script]
+#   environment: 
+#     name: development-2
+#     url: https://websocket-proxy-2.dev.gke.papers.tech
+
+# k8s-deploy-production:
+#   stage: deploy
+#   when: manual
+#   extends: .run_prod
+#   needs: ["publish-prod"]
+#   variables:
+#     IMAGE_TAG: $GOOGLE_TAG
+#   script:
+#     - !reference [.deployment_script, script]
+#   environment: 
+#     name: production
+#     url: https://websocket-proxy.prod.gke.papers.tech
+
+
+.pre_ansible_script:
   extends: .run_dev
-  when: manual
-  needs: ["publish-dev"]
-  variables:
-    IMAGE_TAG: $GOOGLE_TAG_DEV
-  script:
-    - !reference [.deployment_script, script]
-  environment: 
-    name: development
-    url: https://websocket-proxy.dev.gke.papers.tech
+  image: python:3.11
+  before_script:
+    - apt-get update && apt-get install sshpass -y
+    - pip install ansible ansible-lint
 
 
-k8s-deploy-development-2:
-  stage: deploy
-  extends: .run_dev
+.run_playbook:
+  stage: run-ansible
+  extends: .pre_ansible_script
   when: manual
-  needs: ["publish-dev"]
-  variables:
-    IMAGE_TAG: $GOOGLE_TAG_DEV
-    NAMESPACE: "websocket-proxy-2"
   script:
-    - !reference [.deployment_script, script]
-  environment: 
-    name: development-2
-    url: https://websocket-proxy-2.dev.gke.papers.tech
+    - echo BASE_ARGS are $BASE_ARGS
+    - echo EXTRA_ARGS are $EXTRA_ARGS
+    - echo ADDITIONAL_ARGS are $ADDITIONAL_ARGS
+    # yamllint disable-line rule:line-length
+    - ansible-playbook $ANSIBLE_PLAYBOOK -i infra/inventory.yaml --extra-vars "git_sha=$CI_COMMIT_SHA" --vault-password-file $vaultpassword $BASE_ARGS $EXTRA_ARGS $ADDITIONAL_ARGS
 
-k8s-deploy-production:
-  stage: deploy
-  when: manual
-  extends: .run_prod
-  needs: ["publish-prod"]
+server_1_initial:
+  extends: .run_playbook
   variables:
-    IMAGE_TAG: $GOOGLE_TAG
-  script:
-    - !reference [.deployment_script, script]
-  environment: 
-    name: production
-    url: https://websocket-proxy.prod.gke.papers.tech
+    ANSIBLE_PLAYBOOK: infra/playbooks/node-setup.yaml
+    EXTRA_ARGS: --limit ws-proxy-server-1
+  environment: ws-proxy-server-1
+
+server_2_initial:
+  extends: .run_playbook
+  variables:
+    ANSIBLE_PLAYBOOK: infra/playbooks/node-setup.yaml
+    EXTRA_ARGS: --limit ws-proxy-server-2
+  environment: ws-proxy-server-2
+
+server_1_update:
+  extends: .run_playbook
+  variables:
+    ANSIBLE_PLAYBOOK: infra/playbooks/node-setup.yaml
+    EXTRA_ARGS: --tags=update --limit ws-proxy-server-1
+  environment: ws-proxy-server-1
+
+server_2_update:
+  extends: .run_playbook
+  variables:
+    ANSIBLE_PLAYBOOK: infra/playbooks/node-setup.yaml
+    EXTRA_ARGS: --tags=update --limit ws-proxy-server-2
+  environment: ws-proxy-server-2

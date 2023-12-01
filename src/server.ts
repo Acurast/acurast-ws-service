@@ -3,7 +3,7 @@ import { type IncomingMessage } from 'http'
 import { type Duplex } from 'stream'
 import WebSocket from 'ws'
 
-import { Proxy } from './proxy'
+import { Proxy } from './proxy/proxy'
 
 const app: Express = express()
 const proxy: Proxy = new Proxy()
@@ -59,6 +59,7 @@ const ping = setInterval(() => {
 
 wss.on('close', () => {
   clearInterval(ping)
+  proxy.destroy()
 })
 
 app.get('/*', (_req: Request, res: Response) => {

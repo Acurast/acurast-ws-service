@@ -1,0 +1,21 @@
+{
+    "permissions": {
+      "allowList": [],
+      "denyList": []
+    },
+    "bootstrap": {
+      "peers": [
+        {% for peer in peers  %}
+        "{{peer}}" {% if loop.last%} {% else %}, {%endif%}
+        {% endfor %}
+      ]
+    },
+    "peerId": {
+      "id": "{{ node_id }}",
+      "privKey": "{{ node_priv_key }}",
+      "pubKey": "{{ node_pub_key }}"
+    },
+    "port": 50000,
+    "schedulerTimeframe": 60000
+  }
+  

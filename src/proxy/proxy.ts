@@ -1,4 +1,10 @@
-import { forgeMessage, type Message, parseMessage, log } from '@acurast/transport-websocket'
+import {
+  forgeMessage,
+  type Message,
+  parseMessage,
+  log,
+  InitMessage
+} from '@acurast/transport-websocket'
 import type WebSocket from 'ws'
 
 import {
@@ -7,22 +13,16 @@ import {
   type ProcessorAction,
   type SendProcessorAction,
   type RespondProcessorAction
-} from './processor/message-processor'
-import { V1MessageProcessor } from './processor/v1-message-processor'
-import { hexFrom } from './utils/bytes'
-import { Listener } from './peer/listener'
-import { MessageScheduler } from './scheduler/message-scheduler'
+} from '../processor/message-processor'
+import { hexFrom } from '../utils/bytes'
+import { MessageScheduler } from '../scheduler/message-scheduler'
+import Permissions from '../permissions/permissions'
+import { ConnectionDataInitializer } from '../conection-data/connection-data-initializer'
+import { AbstractProxy } from './abstract-proxy'
+import { PeerHandlers } from '../peer/peer-handlers'
 
-export class Proxy {
-  private readonly processors: Record<number, MessageProcessor> = {
-    1: new V1MessageProcessor()
-  }
-
-  private readonly webSockets: Map<string, WebSocket> = new Map()
-  private readonly webSocketsReversed: Map<WebSocket, string> = new Map()
-  private readonly listener: Listener = new Listener(this.onNetworkMessage.bind(this))
-
-  public onNetworkMessage(message: Uint8Array) {
+export class Proxy extends AbstractProxy {
+  protected override handleMessage(message: Uint8Array) {
     const parsed = parseMessage(message)
 
     if (!parsed) {
@@ -36,17 +36,33 @@ export class Proxy {
 
     if (!socket) {
       MessageScheduler.instance.add(recipient, { message, timestamp: Date.now() })
-      return
+    } else {
+      this.listener.broadcast(PeerHandlers.MESSAGE_CLEANUP, parsed.recipient)
+      socket.send(message)
     }
+  }
 
-    socket.send(message)
+  protected override cleanupMessages(sender: Uint8Array): void {
+    MessageScheduler.instance.getAll(hexFrom(sender))
   }
 
   public async onMessage(ws: WebSocket, bytes: Buffer): Promise<void> {
-    console.log('listener: ', this.listener)
     const message: Message | undefined = parseMessage(bytes)
     if (message === undefined) {
       this.log('Message', bytes, 'not recognized')
+      return
+    }
+    const senderStr = hexFrom(message.sender)
+    const data = this.webSocketsData.get(senderStr) ?? {}
+
+    if (
+      !Permissions.isAllowed(
+        senderStr,
+        data.permissions?.allowList ?? [],
+        data.permissions?.denyList ?? []
+      )
+    ) {
+      this.log('Access denied.')
       return
     }
 
@@ -80,6 +96,7 @@ export class Proxy {
       this.log(sender, `closed connection (${details})`)
 
       this.webSockets.delete(sender)
+      this.webSocketsData.delete(sender)
       Object.values(this.processors).forEach((processor: MessageProcessor) => {
         void processor.onClosed(Buffer.from(sender, 'hex'))
       })
@@ -90,6 +107,10 @@ export class Proxy {
     const sender: string = hexFrom(action.sender)
     this.webSockets.set(sender, ws)
     this.webSocketsReversed.set(ws, sender)
+    this.webSocketsData.set(
+      sender,
+      ConnectionDataInitializer.initialize(action.message as InitMessage)
+    )
 
     if (action.message !== undefined) {
       try {
@@ -99,8 +120,8 @@ export class Proxy {
         return
       }
     }
-
     MessageScheduler.instance.getAll(sender)?.forEach((msg) => ws.send(msg.message))
+    this.listener.broadcast(PeerHandlers.MESSAGE_CLEANUP, action.sender)
   }
 
   private async onRespond(action: RespondProcessorAction, ws: WebSocket): Promise<void> {
@@ -117,9 +138,12 @@ export class Proxy {
     this.log('Sending', action.message, 'to', recipient)
 
     const ws: WebSocket | undefined = this.webSockets.get(recipient)
+
     if (ws === undefined) {
       if (action.message.type === 'payload') {
-        await this.listener.broadcast('/forward-message', forgeMessage(action.message))
+        const message = forgeMessage(action.message)
+        MessageScheduler.instance.add(recipient, { message, timestamp: Date.now() })
+        this.listener.broadcast(PeerHandlers.FOWARD_MESSAGE, message)
       }
       return
     }

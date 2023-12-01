@@ -1,12 +1,13 @@
+import { proxyConfigReader } from '../proxy-reader'
 import { SchedulerElement } from './scheduler-element'
 
 export abstract class AbstractScheduler<T extends SchedulerElement> {
   private queue: Map<string, T[]> = new Map()
   private lastCleanup: number = 0
-  timeframe: number = 60000
+  timeframe: number = proxyConfigReader('schedulerTimeframe', 60000)
 
   /**
-   * removes entries if expired
+   * Removes all expired entries
    */
   cleanup() {
     const now = Date.now()
@@ -28,10 +29,9 @@ export abstract class AbstractScheduler<T extends SchedulerElement> {
     this.lastCleanup = now
   }
   /**
-   *
+   * Add an entry to the queue
    * @param key unique id
-   * @param message the entry itself
-   * @param timestamp when the entry was stored
+   * @param entry a SchedulerElement object
    */
   add(key: string, entry: T) {
     if (this.queue.has(key)) {
@@ -42,17 +42,15 @@ export abstract class AbstractScheduler<T extends SchedulerElement> {
   }
 
   /**
-   *
-   * @param key unique id
-   * @param message a list of entries
-   * @param timestamp when the entry was stored
+   * Append an array of objects
+   * @param key uinque id
+   * @param entries a list of SchedulerElement objects
    */
   addAll(key: string, entries: T[]) {
     entries.forEach((entry) => this.add(key, entry))
   }
 
   /**
-   *
    * @param key unique id
    * @returns the latest inserted entry and removes it from the queue
    */
@@ -61,7 +59,6 @@ export abstract class AbstractScheduler<T extends SchedulerElement> {
   }
 
   /**
-   *
    * @param key unique id
    * @returns the oldest inserted entry and removes it from the queue
    */
@@ -70,7 +67,6 @@ export abstract class AbstractScheduler<T extends SchedulerElement> {
   }
 
   /**
-   *
    * @param key unique id
    * @returns all the entries and removes them from the queue
    */

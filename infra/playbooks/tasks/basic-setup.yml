@@ -1,0 +1,88 @@
+---
+- name: Set hostname
+  ansible.builtin.hostname:
+    name: "{{ inventory_hostname }}"
+- name: Apt update
+  tags:
+    - update
+  ansible.builtin.apt:
+    update_cache: true
+    upgrade: safe
+- name: Install packages
+  ansible.builtin.apt:
+    pkg:
+      - curl
+      - git
+      - sysstat
+      - cron
+      - ca-certificates
+      - curl
+      - gnupg
+  tags:
+    - initial
+
+- name: Add apt key
+  tags:
+    - initial
+  ansible.builtin.apt_key:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    state: present
+
+- name: Add Docker Repository
+  ansible.builtin.apt_repository:
+    repo: deb https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable
+    state: present
+
+- name: Update and install docker-ce
+  tags:
+    - initial
+    - update
+  ansible.builtin.apt:
+    pkg:
+      - docker-ce
+      - docker-ce-cli
+      - docker-compose-plugin
+    update_cache: true
+
+- name: Get monitoring code
+  tags:
+    - skip_ansible_lint
+    - initial
+    - update
+  ansible.builtin.git:
+    # yamllint disable-line rule:line-length
+    repo: 'https://gcp:{{ monitoring_token }}@gitlab.papers.tech/papers/monitoring.git'
+    dest: /root/monitoring
+    force: true
+- name: Make io script executable
+  tags:
+    - initial
+    - update
+  ansible.builtin.file:
+    path: /root/monitoring/scripts/monitor_io_alert2teams.sh
+    state: file
+    mode: '0777'
+- name: Make usage script executable
+  tags:
+    - initial
+    - update
+  ansible.builtin.file:
+    path: /root/monitoring/scripts/monitor_usage_alert2teams.sh
+    state: file
+    mode: '0777'
+- name: Setup Crontab io
+  tags:
+    - initial
+    - update
+  ansible.builtin.cron:
+    name: "check io"
+    minute: "*/5"
+    job: "/root/monitoring/scripts/monitor_io_alert2teams.sh >/dev/null 2>&1"
+- name: Setup Crontab usage
+  tags:
+    - initial
+    - update
+  ansible.builtin.cron:
+    name: "check usage"
+    minute: "*/5"
+    job: "/root/monitoring/scripts/monitor_usage_alert2teams.sh >/dev/null 2>&1"

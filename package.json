@@ -10,20 +10,24 @@
     "test:ci": "nyc -r lcov -e .ts -x \"*.spec.ts\" yarn test"
   },
   "dependencies": {
-    "@acurast/transport-websocket": "1.0.0-beta.1",
-    "elliptic": "^6.5.4",
-    "express": "^4.18.2",
-    "ws": "^8.13.0"
-  },
-  "devDependencies": {
+    "@acurast/transport-websocket": "1.0.1-beta.2",
     "@chainsafe/libp2p-noise": "^13.0.1",
     "@chainsafe/libp2p-yamux": "^5.0.0",
     "@libp2p/bootstrap": "^9.0.7",
+    "@libp2p/crypto": "^2.0.5",
     "@libp2p/interface-libp2p": "^3.2.0",
     "@libp2p/interface-peer-id": "^2.0.2",
     "@libp2p/mdns": "^9.0.9",
     "@libp2p/mplex": "^9.0.7",
+    "@libp2p/peer-id": "^3.0.3",
+    "@libp2p/peer-id-factory": "^3.0.5",
     "@libp2p/websockets": "^7.0.8",
+    "elliptic": "^6.5.4",
+    "express": "^4.18.2",
+    "libp2p": "^0.46.12",
+    "ws": "^8.13.0"
+  },
+  "devDependencies": {
     "@types/chai": "^4.3.5",
     "@types/chai-as-promised": "^7.1.5",
     "@types/elliptic": "^6.4.14",
@@ -42,7 +46,6 @@
     "eslint-plugin-n": "^16.0.2",
     "eslint-plugin-promise": "^6.1.1",
     "husky": "^8.0.3",
-    "libp2p": "^0.46.12",
     "mocha": "^10.2.0",
     "nyc": "^15.1.0",
     "prettier": "^3.0.2",
