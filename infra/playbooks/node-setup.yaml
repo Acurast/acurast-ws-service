@@ -1,0 +1,18 @@
+---
+- name: run basic setup
+  hosts: all
+  vars:
+    ansible_host_key_checking: false
+  tasks:
+    - name: Include basic setup
+      tags:
+        - basic
+        - update
+      ansible.builtin.import_tasks:
+        file: tasks/basic-setup.yml
+    - name: deploy websocket proxy
+      tags:
+        - basic
+        - update
+      ansible.builtin.import_tasks:
+        file: tasks/websocket-proxy.yml

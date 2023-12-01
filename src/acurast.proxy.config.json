@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allowList": [],
+    "denyList": []
+  },
+  "bootstrap": {
+    "peers": []
+  },
+  "peerId": {
+    "id": "12D3KooWRfCUSHQqPsbnBUJJ9j5rk4CxgVZi3etbg7dRFR12rvG7",
+    "privKey": "CAESQOYsk10QTqqtp9gGSt1TZ3bNJ1NEMUSXdJfb7JslbEq262HNKWZd/ppjRHXs3XuQgqJQc7kzBEQmzghEnxxno5g=",
+    "pubKey": "CAESIOthzSlmXf6aY0R17N17kIKiUHO5MwREJs4IRJ8cZ6OY"
+  },
+  "port": 50000,
+  "schedulerTimeframe": 60000
+}
