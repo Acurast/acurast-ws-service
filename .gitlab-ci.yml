@@ -136,3 +136,15 @@ server_2_update:
     ANSIBLE_PLAYBOOK: infra/playbooks/node-setup.yaml
     EXTRA_ARGS: --tags=update --limit ws-proxy-server-2
   environment: ws-proxy-server-2
+
+server_1_any_playbook:
+  extends: .run_playbook
+  variables:
+    EXTRA_ARGS: --limit ws-proxy-server-1
+  environment: ws-proxy-server-1
+
+server_2_any_playbook:
+  extends: .run_playbook
+  variables:
+    EXTRA_ARGS: --limit ws-proxy-server-2
+  environment: ws-proxy-server-2
