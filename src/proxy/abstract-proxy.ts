@@ -5,6 +5,7 @@ import { MessageProcessor } from '../processor/message-processor'
 import { V1MessageProcessor } from '../processor/v1-message-processor'
 import type WebSocket from 'ws'
 import { PeerEvent, PeerEventType } from '../peer/peer-event'
+import { Logger } from '../utils/Logger'
 
 export abstract class AbstractProxy {
   private subscriptions: Subscription[] = []
@@ -28,6 +29,7 @@ export abstract class AbstractProxy {
   protected abstract cleanupMessages(sender: Uint8Array): void
 
   private onNetworkMessage(data: PeerEvent<Uint8Array>): void {
+    Logger.debug('AbstractProxy', 'onNetworkMessage', 'begin')
     switch (data.type) {
       case PeerEventType.MESSAGE_RECEIVED:
         this.handleMessage(data.message)
@@ -38,10 +40,13 @@ export abstract class AbstractProxy {
       default:
         break
     }
+    Logger.debug('AbstractProxy', 'onNetworkMessage', 'end')
   }
 
   destroy() {
+    Logger.debug('AbstractProxy', 'destroy', 'begin')
     this.subscriptions.forEach((sub) => sub.unsubscribe())
     this.listener.stop()
+    Logger.debug('AbstractProxy', 'destroy', 'begin')
   }
 }

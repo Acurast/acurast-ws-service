@@ -12,5 +12,6 @@
     "pubKey": "CAESIOthzSlmXf6aY0R17N17kIKiUHO5MwREJs4IRJ8cZ6OY"
   },
   "port": 50000,
-  "schedulerTimeframe": 60000
+  "schedulerTimeframe": 60000,
+  "debug": true
 }

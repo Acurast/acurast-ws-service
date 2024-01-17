@@ -1,10 +1,4 @@
-import {
-  forgeMessage,
-  type Message,
-  parseMessage,
-  log,
-  InitMessage
-} from '@acurast/transport-websocket'
+import { forgeMessage, type Message, parseMessage, InitMessage } from '@acurast/transport-websocket'
 import type WebSocket from 'ws'
 
 import {
@@ -20,9 +14,11 @@ import Permissions from '../permissions/permissions'
 import { ConnectionDataInitializer } from '../conection-data/connection-data-initializer'
 import { AbstractProxy } from './abstract-proxy'
 import { PeerHandlers } from '../peer/peer-handlers'
+import { Logger } from '../utils/Logger'
 
 export class Proxy extends AbstractProxy {
   protected override handleMessage(message: Uint8Array) {
+    Logger.debug('Proxy', 'handleMessage', 'begin')
     const parsed = parseMessage(message)
 
     if (!parsed) {
@@ -40,16 +36,20 @@ export class Proxy extends AbstractProxy {
       this.listener.broadcast(PeerHandlers.MESSAGE_CLEANUP, parsed.recipient)
       socket.send(message)
     }
+    Logger.debug('Proxy', 'handleMessage', 'end')
   }
 
   protected override cleanupMessages(sender: Uint8Array): void {
+    Logger.debug('Proxy', 'cleanupMessages', 'begin')
     MessageScheduler.instance.getAll(hexFrom(sender))
+    Logger.debug('Proxy', 'cleanupMessages', 'end')
   }
 
   public async onMessage(ws: WebSocket, bytes: Buffer): Promise<void> {
+    Logger.debug('Proxy', 'onMessage', 'begin')
     const message: Message | undefined = parseMessage(bytes)
     if (message === undefined) {
-      this.log('Message', bytes, 'not recognized')
+      Logger.log('Message', bytes, 'not recognized')
       return
     }
     const senderStr = hexFrom(message.sender)
@@ -62,15 +62,15 @@ export class Proxy extends AbstractProxy {
         data.permissions?.denyList ?? []
       )
     ) {
-      this.log('Access denied.')
+      Logger.log('Access denied.')
       return
     }
 
-    this.log('Got message', message)
+    Logger.log('Got message', message)
 
     const processor: MessageProcessor | undefined = this.processors[message.version]
     if (processor === undefined) {
-      this.log('Message version', message.version, 'not supported')
+      Logger.log('Message version', message.version, 'not supported')
       return
     }
 
@@ -86,14 +86,16 @@ export class Proxy extends AbstractProxy {
         await this.onSend(action)
         break
     }
+    Logger.debug('Proxy', 'onMessage', 'end')
   }
 
   public reset(code: number, reason: string, ws: WebSocket): void {
+    Logger.debug('Proxy', 'reset', 'begin')
     const sender: string | undefined = this.webSocketsReversed.get(ws)
     this.webSocketsReversed.delete(ws)
     if (sender !== undefined) {
       const details: string = reason.length > 0 ? `${code}: ${reason}` : code.toString()
-      this.log(sender, `closed connection (${details})`)
+      Logger.log(sender, `closed connection (${details})`)
 
       this.webSockets.delete(sender)
       this.webSocketsData.delete(sender)
@@ -101,9 +103,11 @@ export class Proxy extends AbstractProxy {
         void processor.onClosed(Buffer.from(sender, 'hex'))
       })
     }
+    Logger.debug('Proxy', 'reset', 'end')
   }
 
   private async onRegister(action: RegisterProcessorAction, ws: WebSocket): Promise<void> {
+    Logger.debug('Proxy', 'onRegister', 'begin')
     const sender: string = hexFrom(action.sender)
     this.webSockets.set(sender, ws)
     this.webSocketsReversed.set(ws, sender)
@@ -122,20 +126,24 @@ export class Proxy extends AbstractProxy {
     }
     MessageScheduler.instance.getAll(sender)?.forEach((msg) => ws.send(msg.message))
     this.listener.broadcast(PeerHandlers.MESSAGE_CLEANUP, action.sender)
+    Logger.debug('Proxy', 'onRegister', 'end')
   }
 
   private async onRespond(action: RespondProcessorAction, ws: WebSocket): Promise<void> {
+    Logger.debug('Proxy', 'onRespond', 'begin')
     try {
       await this.send(ws, action.message)
     } catch (error) {
       console.error(error)
     }
+    Logger.debug('Proxy', 'onRespond', 'end')
   }
 
   private async onSend(action: SendProcessorAction): Promise<void> {
+    Logger.debug('Proxy', 'onSend', 'begin')
     const recipient: string = hexFrom(action.message.recipient)
 
-    this.log('Sending', action.message, 'to', recipient)
+    Logger.log('Sending', action.message, 'to', recipient)
 
     const ws: WebSocket | undefined = this.webSockets.get(recipient)
 
@@ -150,13 +158,15 @@ export class Proxy extends AbstractProxy {
 
     try {
       await this.send(ws, action.message)
-      this.log('Sent', action.message, 'to', recipient, 'successfully')
+      Logger.log('Sent', action.message, 'to', recipient, 'successfully')
     } catch (error) {
-      this.log('Sending', action.message, 'to', recipient, 'failed', error)
+      Logger.log('Sending', action.message, 'to', recipient, 'failed', error)
     }
+    Logger.debug('Proxy', 'onSend', 'end')
   }
 
   private async send(ws: WebSocket, message: Message): Promise<void> {
+    Logger.debug('Proxy', 'send', 'begin')
     await new Promise<void>((resolve, reject) => {
       ws.send(forgeMessage(message), (error: Error | undefined | null) => {
         if (error !== undefined && error !== null) {
@@ -166,9 +176,6 @@ export class Proxy extends AbstractProxy {
         }
       })
     })
-  }
-
-  private log(...data: any[]): void {
-    log('[PROXY]', ...data)
+    Logger.debug('Proxy', 'send', 'end')
   }
 }

@@ -8,6 +8,7 @@ import { PeerEvent } from './peer-event'
 import { PermissionElement } from '../permissions/permission-element'
 import { PermissionsUtils } from '../permissions/permissions-utils'
 import Permissions from '../permissions/permissions'
+import { Logger } from '../utils/Logger'
 
 const dynamicLoader = async (): Promise<any> => ({
   createLibp2p: (await import('libp2p')).createLibp2p,
@@ -73,7 +74,7 @@ export abstract class AbstractPeer extends Observable<PeerEvent<Uint8Array>> imp
   private onPeerConnect(node: any) {
     node.addEventListener('peer:connect', async (evt: any) => {
       if (!Permissions.isAllowed(evt.detail.toString(), this.allowList, this.denyList)) {
-        console.log(evt.detail.toString(), 'unauthorized.')
+        Logger.log(evt.detail.toString(), 'unauthorized.')
         node.hangUp(evt.detail)
       } else {
         this.onPeerConnectHandler(evt)
@@ -82,21 +83,28 @@ export abstract class AbstractPeer extends Observable<PeerEvent<Uint8Array>> imp
   }
 
   async broadcast(protocol: string, payload: Uint8Array) {
+    Logger.debug('AbstractPeer', 'broadcast', 'begin')
     const node = await this.node
 
     await Promise.allSettled(
       node.getPeers().map((peer: any) => this.dialProtocol(peer, protocol, payload))
     )
+
+    Logger.debug('AbstractPeer', 'broadcast', 'end')
   }
 
   protected async ping(peer: any) {
+    Logger.debug('AbstractPeer', 'ping', 'begin')
     const node = await this.node
     await node.dial(peer)
+    Logger.debug('AbstractPeer', 'ping', 'end')
   }
 
   protected async dialProtocol(peer: any, protocol: string, payload: Uint8Array) {
+    Logger.debug('AbstractPeer', 'dialProtocol', 'begin')
     const node = await this.node
     await StreamUtils.write(await node.dialProtocol(peer, protocol), hexFrom(payload))
+    Logger.debug('AbstractPeer', 'dialProtocol', 'end')
   }
 
   protected async start() {
