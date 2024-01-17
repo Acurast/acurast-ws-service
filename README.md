@@ -21,3 +21,4 @@ There are gitlab-ci jobs to update each server individually.
     - `service ssh restart`
     - ensure ports 50000 and 9001 are open
     - set static ip
+    
