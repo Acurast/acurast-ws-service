@@ -16,6 +16,7 @@
       "pubKey": "{{ node_pub_key }}"
     },
     "port": 50000,
-    "schedulerTimeframe": 60000
+    "schedulerTimeframe": 60000,
+    "debug": true
   }
   
