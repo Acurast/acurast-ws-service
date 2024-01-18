@@ -9,15 +9,15 @@ import { Logger } from './utils/Logger'
 const app: Express = express()
 const proxy: Proxy = new Proxy()
 const wss = new WebSocket.Server({ noServer: true, clientTracking: true })
-
-const isAlive: Map<WebSocket, boolean> = new Map()
+const isAlive: Map<WebSocket, number> = new Map()
+const timeout: number = 60000
 
 wss.on('connection', (ws: WebSocket) => {
   ws.binaryType = 'nodebuffer'
 
   ws.on('message', (data: WebSocket.RawData) => {
     Logger.debug('server', 'ws.message', 'begin')
-    isAlive.set(ws, true)
+    isAlive.set(ws, Date.now())
     const bytes: Buffer | undefined = Buffer.isBuffer(data)
       ? data
       : data instanceof ArrayBuffer
@@ -32,7 +32,7 @@ wss.on('connection', (ws: WebSocket) => {
   })
 
   ws.on('pong', () => {
-    isAlive.set(ws, true)
+    isAlive.set(ws, Date.now())
   })
 
   ws.on('close', (code: number, reason: Buffer) => {
@@ -52,17 +52,16 @@ wss.on('error', (error: Error) => {
 })
 
 const ping = setInterval(() => {
+  const now = Date.now()
   wss.clients.forEach((ws: WebSocket) => {
-    if (isAlive.get(ws) === false) {
-      ws.terminate()
-      isAlive.delete(ws)
+    if (now - (isAlive.get(ws) ?? 0) < timeout) {
+      ws.ping()
       return
     }
-
-    isAlive.set(ws, false)
-    ws.ping()
+    ws.terminate()
+    isAlive.delete(ws)
   })
-}, 60 * 1000)
+}, timeout)
 
 wss.on('close', () => {
   Logger.debug('server', 'close', 'begin')
