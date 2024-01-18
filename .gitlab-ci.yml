@@ -13,7 +13,11 @@ variables:
 stages:
   - build
   - test
-  - run-ansible
+
+.run_dev:
+  extends: .before_script_dev
+  only:
+    - feat/libp2p
 
 
 build:
