@@ -40,4 +40,8 @@ export class Logger {
       `duration = ${(last ? performance.now() - last.start : 0).toFixed(3)} ms`
     )
   }
+
+  static error(...data: any[]): void {
+    log('[ERROR]', ...data)
+  }
 }
