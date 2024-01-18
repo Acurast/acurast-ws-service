@@ -12,7 +12,7 @@ export abstract class AbstractScheduler<T extends SchedulerElement> {
   cleanup() {
     const now = Date.now()
 
-    if (now - this.lastCleanup <= this.timeframe) {
+    if (now - this.lastCleanup < this.timeframe) {
       return
     }
 

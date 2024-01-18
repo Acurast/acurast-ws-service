@@ -31,14 +31,26 @@ export class Listener extends AbstractPeer {
     await node.handle(PeerHandlers.FOWARD_MESSAGE, async ({ connection, stream }: any) => {
       Logger.debug('Listener', PeerHandlers.FOWARD_MESSAGE, 'begin')
       Logger.log(`${node.peerId}/client-discovery: request received from ${connection.remotePeer}`)
-      await StreamUtils.read(stream, this.onMessageForwarded.bind(this))
+
+      try {
+        await StreamUtils.read(stream, this.onMessageForwarded.bind(this))
+      } catch (error: any) {
+        Logger.error(error.message)
+      }
+
       Logger.debug('Listener', PeerHandlers.FOWARD_MESSAGE, 'end')
     })
 
     await node.handle(PeerHandlers.MESSAGE_CLEANUP, async ({ connection, stream }: any) => {
       Logger.debug('Listener', PeerHandlers.MESSAGE_CLEANUP, 'begin')
       Logger.log(`${node.peerId}/message-cleanup: request received from ${connection.remotePeer}`)
-      await StreamUtils.read(stream, this.onNotifyDelivery.bind(this))
+
+      try {
+        await StreamUtils.read(stream, this.onNotifyDelivery.bind(this))
+      } catch (error: any) {
+        Logger.error(error.message)
+      }
+
       Logger.debug('Listener', PeerHandlers.MESSAGE_CLEANUP, 'end')
     })
 
