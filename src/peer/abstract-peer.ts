@@ -3,7 +3,7 @@ import { StreamUtils } from '../utils/stream-utils'
 import { hexFrom } from '../utils/bytes'
 import { proxyConfigReader } from '../proxy-reader'
 import { PeerIdBuilder } from './peerid-builder'
-import { Observable } from '../observable/observable'
+import { Observable, Observer } from '../observable/observable'
 import { PeerEvent } from './peer-event'
 import { PermissionElement } from '../permissions/permission-element'
 import { PermissionsUtils } from '../permissions/permissions-utils'
@@ -22,13 +22,27 @@ const dynamicLoader = async (): Promise<any> => ({
 
 export abstract class AbstractPeer extends Observable<PeerEvent<Uint8Array>> implements Peer {
   private node: Promise<any>
-  private readonly allowList: PermissionElement[] = PermissionsUtils.initList('permissions.allowList')
+  private readonly allowList: PermissionElement[] =
+    PermissionsUtils.initList('permissions.allowList')
   private readonly denyList: PermissionElement[] = PermissionsUtils.initList('permissions.denyList')
+  private readonly keepAlive: NodeJS.Timeout
 
   constructor() {
     super()
     this.node = this.init()
+    this.keepAlive = this.initKeepAlive()
     this.run()
+  }
+
+  private initKeepAlive() {
+    return setInterval(() => {
+      this.ping()
+    }, 60000)
+  }
+
+  protected override unsubscribe(observer: Observer<PeerEvent<Uint8Array>>): void {
+    clearInterval(this.keepAlive)
+    super.unsubscribe(observer)
   }
 
   private async init(): Promise<any> {
@@ -93,10 +107,12 @@ export abstract class AbstractPeer extends Observable<PeerEvent<Uint8Array>> imp
     Logger.debug('AbstractPeer', 'broadcast', 'end')
   }
 
-  protected async ping(peer: any) {
+  protected async ping() {
     Logger.debug('AbstractPeer', 'ping', 'begin')
     const node = await this.node
-    await node.dial(peer)
+
+    await Promise.allSettled(node.getPeers().map((peer: any) => node.dial(peer)))
+
     Logger.debug('AbstractPeer', 'ping', 'end')
   }
 
@@ -105,6 +121,11 @@ export abstract class AbstractPeer extends Observable<PeerEvent<Uint8Array>> imp
     const node = await this.node
     await StreamUtils.write(await node.dialProtocol(peer, protocol), hexFrom(payload))
     Logger.debug('AbstractPeer', 'dialProtocol', 'end')
+  }
+
+  protected async hangUp(peer: any) {
+    const node = await this.node
+    node.hangUp(peer)
   }
 
   protected async start() {
