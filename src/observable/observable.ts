@@ -17,7 +17,7 @@ export abstract class Observable<T> {
     return { unsubscribe }
   }
 
-  private unsubscribe(observer: Observer<T>): void {
+  protected unsubscribe(observer: Observer<T>): void {
     this.observers = this.observers.filter((subscriber) => subscriber !== observer)
   }
 

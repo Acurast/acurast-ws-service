@@ -32,11 +32,10 @@ export class Listener extends AbstractPeer {
       Logger.debug('Listener', PeerHandlers.FOWARD_MESSAGE, 'begin')
       Logger.log(`${node.peerId}/client-discovery: request received from ${connection.remotePeer}`)
 
-      try {
-        await StreamUtils.read(stream, this.onMessageForwarded.bind(this))
-      } catch (error: any) {
-        Logger.error(error.message)
-      }
+      StreamUtils.read(stream, this.onMessageForwarded.bind(this)).catch((err) => {
+        Logger.error(err.message)
+        node.hangUp(connection.remotePeer)
+      })
 
       Logger.debug('Listener', PeerHandlers.FOWARD_MESSAGE, 'end')
     })
@@ -45,11 +44,10 @@ export class Listener extends AbstractPeer {
       Logger.debug('Listener', PeerHandlers.MESSAGE_CLEANUP, 'begin')
       Logger.log(`${node.peerId}/message-cleanup: request received from ${connection.remotePeer}`)
 
-      try {
-        await StreamUtils.read(stream, this.onNotifyDelivery.bind(this))
-      } catch (error: any) {
-        Logger.error(error.message)
-      }
+      StreamUtils.read(stream, this.onNotifyDelivery.bind(this)).catch((err) => {
+        Logger.error(err.message)
+        node.hangUp(connection.remotePeer)
+      })
 
       Logger.debug('Listener', PeerHandlers.MESSAGE_CLEANUP, 'end')
     })
