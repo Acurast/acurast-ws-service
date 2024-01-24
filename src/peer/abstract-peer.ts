@@ -25,6 +25,7 @@ export abstract class AbstractPeer extends Observable<PeerEvent<Uint8Array>> imp
   private readonly allowList: PermissionElement[] =
     PermissionsUtils.initList('permissions.allowList')
   private readonly denyList: PermissionElement[] = PermissionsUtils.initList('permissions.denyList')
+  private readonly failedMsgs: Map<string, Uint8Array[]> = new Map()
   private readonly keepAlive: NodeJS.Timeout
 
   constructor() {
@@ -38,6 +39,20 @@ export abstract class AbstractPeer extends Observable<PeerEvent<Uint8Array>> imp
     return setInterval(() => {
       this.ping()
     }, 60000)
+  }
+
+  private addFailedMsg(key: string, payload: Uint8Array) {
+    if (this.failedMsgs.has(key)) {
+      this.failedMsgs.get(key)?.push(payload)
+    } else {
+      this.failedMsgs.set(key, [payload])
+    }
+  }
+
+  protected getFailedMsgs(key: string): Uint8Array[] {
+    const msgs = this.failedMsgs.get(key) ?? []
+    this.failedMsgs.delete(key)
+    return msgs
   }
 
   protected override unsubscribe(observer: Observer<PeerEvent<Uint8Array>>): void {
@@ -89,7 +104,7 @@ export abstract class AbstractPeer extends Observable<PeerEvent<Uint8Array>> imp
     node.addEventListener('peer:connect', async (evt: any) => {
       if (!Permissions.isAllowed(evt.detail.toString(), this.allowList, this.denyList)) {
         Logger.log(evt.detail.toString(), 'unauthorized.')
-        node.hangUp(evt.detail)
+        this.hangUp(evt.detail)
       } else {
         this.onPeerConnectHandler(evt)
       }
@@ -119,7 +134,12 @@ export abstract class AbstractPeer extends Observable<PeerEvent<Uint8Array>> imp
   protected async dialProtocol(peer: any, protocol: string, payload: Uint8Array) {
     Logger.debug('AbstractPeer', 'dialProtocol', 'begin')
     const node = await this.node
-    await StreamUtils.write(await node.dialProtocol(peer, protocol), hexFrom(payload))
+    try {
+      await StreamUtils.write(await node.dialProtocol(peer, protocol), hexFrom(payload))
+    } catch (err: any) {
+      Logger.error(err.message)
+      this.addFailedMsg(peer.toString(), payload)
+    }
     Logger.debug('AbstractPeer', 'dialProtocol', 'end')
   }
 
