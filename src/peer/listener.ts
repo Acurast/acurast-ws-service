@@ -14,7 +14,20 @@ export class Listener extends AbstractPeer {
     Logger.log('Peer discovered: ', evt.detail.id.toString())
   }
   protected override onPeerConnectHandler(evt: CustomEvent<any>): void {
-    Logger.log('Peer connected: ', evt.detail.toString())
+    const peerId = evt.detail.toString()
+    Logger.log('Peer connected: ', peerId)
+
+    // in the event a node has abruptly disconnected, send again all undelivered messages
+    const failedMsgs = this.getFailedMsgs(peerId)
+
+    if (!failedMsgs.length) {
+      return
+    }
+
+    Logger.log(`Forwarding lost messages to ${peerId}`)
+    Promise.allSettled(
+      failedMsgs.map((msg) => this.dialProtocol(evt.detail, PeerHandlers.FOWARD_MESSAGE, msg))
+    )
   }
 
   private async onMessageForwarded(message: string) {
