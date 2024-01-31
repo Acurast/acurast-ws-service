@@ -1,4 +1,5 @@
 {
+  "instanceName": "{{ server_name }}",
     "permissions": {
       "allowList": [],
       "denyList": []

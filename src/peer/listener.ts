@@ -4,6 +4,7 @@ import { hexTo } from '../utils/bytes'
 import { PeerHandlers } from './peer-handlers'
 import { PeerEventType } from './peer-event'
 import { Logger } from '../utils/Logger'
+import * as Sentry from '@sentry/node'
 
 export class Listener extends AbstractPeer {
   constructor() {
@@ -30,36 +31,36 @@ export class Listener extends AbstractPeer {
     )
   }
 
-  private async onMessageForwarded(message: string) {
+  private onMessageForwarded(message: string) {
     this.next({ type: PeerEventType.MESSAGE_RECEIVED, message: hexTo(message) })
   }
 
-  private async onNotifyDelivery(message: string) {
+  private onNotifyDelivery(message: string) {
     this.next({ type: PeerEventType.MESSAGE_CLEANUP, message: hexTo(message) })
   }
 
   protected override async run(): Promise<void> {
     const node = await this.start()
 
-    await node.handle(PeerHandlers.FOWARD_MESSAGE, async ({ connection, stream }: any) => {
+    node.handle(PeerHandlers.FOWARD_MESSAGE, async ({ connection, stream }: any) => {
       Logger.debug('Listener', PeerHandlers.FOWARD_MESSAGE, 'begin')
       Logger.log(`${node.peerId}/client-discovery: request received from ${connection.remotePeer}`)
 
       StreamUtils.read(stream, this.onMessageForwarded.bind(this)).catch((err) => {
         Logger.error(err.message)
-        node.hangUp(connection.remotePeer)
+        Sentry.captureException(err)
       })
 
       Logger.debug('Listener', PeerHandlers.FOWARD_MESSAGE, 'end')
     })
 
-    await node.handle(PeerHandlers.MESSAGE_CLEANUP, async ({ connection, stream }: any) => {
+    node.handle(PeerHandlers.MESSAGE_CLEANUP, async ({ connection, stream }: any) => {
       Logger.debug('Listener', PeerHandlers.MESSAGE_CLEANUP, 'begin')
       Logger.log(`${node.peerId}/message-cleanup: request received from ${connection.remotePeer}`)
 
       StreamUtils.read(stream, this.onNotifyDelivery.bind(this)).catch((err) => {
         Logger.error(err.message)
-        node.hangUp(connection.remotePeer)
+        Sentry.captureException(err)
       })
 
       Logger.debug('Listener', PeerHandlers.MESSAGE_CLEANUP, 'end')

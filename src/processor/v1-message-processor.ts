@@ -14,6 +14,8 @@ import { Crypto } from '../crypto'
 
 import { type ProcessorAction, type MessageProcessor } from './message-processor'
 
+import * as Sentry from '@sentry/node'
+
 export const DEFAULT_DIFFICULTY: Uint8Array = new Uint8Array(16).map(() => 255)
 export const CHALLENGE_LENGTH: number = 16
 
@@ -78,6 +80,7 @@ export class V1MessageProcessor implements MessageProcessor {
         message: createAcceptedMessage(message.sender)
       }
     } catch (error: unknown) {
+      Sentry.captureException(error)
       this.log(
         'Challenge verification for',
         sender,

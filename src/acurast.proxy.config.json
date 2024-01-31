@@ -1,4 +1,5 @@
 {
+  "instanceName": "proxy-0",
   "permissions": {
     "allowList": [],
     "denyList": []

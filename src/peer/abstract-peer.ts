@@ -9,6 +9,7 @@ import { PermissionElement } from '../permissions/permission-element'
 import { PermissionsUtils } from '../permissions/permissions-utils'
 import Permissions from '../permissions/permissions'
 import { Logger } from '../utils/Logger'
+import * as Sentry from '@sentry/node'
 
 const dynamicLoader = async (): Promise<any> => ({
   createLibp2p: (await import('libp2p')).createLibp2p,
@@ -115,9 +116,7 @@ export abstract class AbstractPeer extends Observable<PeerEvent<Uint8Array>> imp
     Logger.debug('AbstractPeer', 'broadcast', 'begin')
     const node = await this.node
 
-    await Promise.allSettled(
-      node.getPeers().map((peer: any) => this.dialProtocol(peer, protocol, payload))
-    )
+    Promise.all(node.getPeers().map((peer: any) => this.dialProtocol(peer, protocol, payload)))
 
     Logger.debug('AbstractPeer', 'broadcast', 'end')
   }
@@ -126,7 +125,7 @@ export abstract class AbstractPeer extends Observable<PeerEvent<Uint8Array>> imp
     Logger.debug('AbstractPeer', 'ping', 'begin')
     const node = await this.node
 
-    await Promise.allSettled(node.getPeers().map((peer: any) => node.dial(peer)))
+    Promise.all(node.getPeers().map((peer: any) => node.dial(peer)))
 
     Logger.debug('AbstractPeer', 'ping', 'end')
   }
@@ -134,12 +133,16 @@ export abstract class AbstractPeer extends Observable<PeerEvent<Uint8Array>> imp
   protected async dialProtocol(peer: any, protocol: string, payload: Uint8Array) {
     Logger.debug('AbstractPeer', 'dialProtocol', 'begin')
     const node = await this.node
-    try {
-      await StreamUtils.write(await node.dialProtocol(peer, protocol), hexFrom(payload))
-    } catch (err: any) {
-      Logger.error(err.message)
-      this.addFailedMsg(peer.toString(), payload)
-    }
+
+    node
+      .dialProtocol(peer, protocol)
+      .then((stream: any) => StreamUtils.write(stream, hexFrom(payload)))
+      .catch((err: any) => {
+        Logger.error(err.message)
+        Sentry.captureException(err)
+        this.addFailedMsg(peer.toString(), payload)
+      })
+
     Logger.debug('AbstractPeer', 'dialProtocol', 'end')
   }
 
