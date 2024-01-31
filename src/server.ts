@@ -5,12 +5,15 @@ import WebSocket from 'ws'
 
 import { Proxy } from './proxy/proxy'
 import { Logger } from './utils/Logger'
+import { initSentry } from './init-sentry'
 
 const app: Express = express()
 const proxy: Proxy = new Proxy()
 const wss = new WebSocket.Server({ noServer: true, clientTracking: true })
 const isAlive: Map<WebSocket, number> = new Map()
-const timeout: number = 60000
+const timeout: number = 600000
+
+initSentry(app)
 
 wss.on('connection', (ws: WebSocket) => {
   ws.binaryType = 'nodebuffer'
