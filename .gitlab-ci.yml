@@ -1,156 +1,92 @@
 ---
-include:
-  - project: "papers/papers-internal/internal"
-    file: "/.base-gitlab-ci.yml"
-    
-
 variables:
   NAMESPACE: "websocket-proxy"
   ANSIBLE_HOST_KEY_CHECKING: 'false'
   ANSIBLE_FORCE_COLOR: 'true'
 
-
 stages:
   - build
   - test
-  - run-ansible
+  - publish
+  - deploy
 
-.run_dev:
-  extends: .before_script_dev
-  only:
-    - feat/libp2p
+include:
+  - project: "papers/acurast/acurast-infra"
+    file: "/.base-gitlab-ci.yml"
+  - component: gitlab.papers.tech/papers/papers-internal/ci-cd-components/build-image@v0.0.28
+  - component: gitlab.papers.tech/papers/papers-internal/ci-cd-components/publish-image@v0.0.28
+    inputs:
+      job-suffix: development
+      extends-definition: .run_dev_rules
+  - component: gitlab.papers.tech/papers/papers-internal/ci-cd-components/publish-image@v0.0.28
+    inputs:
+      extends-definition: .run_prod_rules
+      job-suffix: production
+  - component: gitlab.papers.tech/papers/papers-internal/ci-cd-components/k8s-deploy@v0.0.28
+    inputs:
+      environment: "development/1"
+      needs_config: "publish-image-development"
+      reference: ".deploy-script-dev"
+  - component: gitlab.papers.tech/papers/papers-internal/ci-cd-components/k8s-deploy@v0.0.28
+    inputs:
+      environment: "development/2"
+      needs_config: "publish-image-development"
+      reference: ".deploy-script-dev"
+  - component: gitlab.papers.tech/papers/papers-internal/ci-cd-components/k8s-deploy@v0.0.28
+    inputs:
+      environment: "production/1"
+      needs_config: "publish-image-production"
+      reference: ".deploy-script-prod"
+  - component: gitlab.papers.tech/papers/papers-internal/ci-cd-components/k8s-deploy@v0.0.28
+    inputs:
+      environment: "production/2"
+      needs_config: "publish-image-production"
+      reference: ".deploy-script-prod"
 
-
-build:
-  stage: build
-  extends: .build
+# FIXME:remove before merging to dev / main
+.run_dev_rules:
+  extends:
+    - .base_before_script
+    - .dev_variables
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "feat/k8s_deployment"'
 
 test:
   stage: test
   script:
+    - echo $CI_COMMIT_BRANCH
     - docker run $GOOGLE_TAG bash -c "yarn test:ci"
 
-
-# publish-dev:
-#   stage: publish
-#   extends: .publish-dev
-
-# publish-prod:
-#   stage: publish
-#   extends: .publish-prod
-
-
-# .deployment_script:
-#   script:
-#     # seds
-#     - find k8s -type f -name \*.yaml -exec sed -i "s|__NAMESPACE_NAME__|"$NAMESPACE"|g" {} +
-#     - find k8s -type f -name \*.yaml -exec sed -i "s|__TO_BE_REPLACED_BY_IMAGE_TAG__|"$IMAGE_TAG"|g" {} +
-
-#     # applying the files
-#     - kubectl apply -f k8s/common/namespace.yaml
-#     # - kubectl apply -f k8s/common/secret.yaml
-#     - kubectl apply -f k8s/$CI_ENVIRONMENT_NAME/ --recursive
-#     - kubectl apply -f k8s/common/ --recursive
-
-
-
-# k8s-deploy-development:
-#   stage: deploy
-#   extends: .run_dev
-#   when: manual
-#   needs: ["publish-dev"]
-#   variables:
-#     IMAGE_TAG: $GOOGLE_TAG_DEV
-#   script:
-#     - !reference [.deployment_script, script]
-#   environment: 
-#     name: development
-#     url: https://websocket-proxy.dev.gke.papers.tech
-
-
-# k8s-deploy-development-2:
-#   stage: deploy
-#   extends: .run_dev
-#   when: manual
-#   needs: ["publish-dev"]
-#   variables:
-#     IMAGE_TAG: $GOOGLE_TAG_DEV
-#     NAMESPACE: "websocket-proxy-2"
-#   script:
-#     - !reference [.deployment_script, script]
-#   environment: 
-#     name: development-2
-#     url: https://websocket-proxy-2.dev.gke.papers.tech
-
-# k8s-deploy-production:
-#   stage: deploy
-#   when: manual
-#   extends: .run_prod
-#   needs: ["publish-prod"]
-#   variables:
-#     IMAGE_TAG: $GOOGLE_TAG
-#   script:
-#     - !reference [.deployment_script, script]
-#   environment: 
-#     name: production
-#     url: https://websocket-proxy.prod.gke.papers.tech
-
-
-.pre_ansible_script:
-  extends: .run_dev
-  image: python:3.11
-  before_script:
-    - apt-get update && apt-get install sshpass -y
-    - pip install ansible ansible-lint
-
-
-.run_playbook:
-  stage: run-ansible
-  extends: .pre_ansible_script
-  when: manual
+.deploy-script:
   script:
-    - echo BASE_ARGS are $BASE_ARGS
-    - echo EXTRA_ARGS are $EXTRA_ARGS
-    - echo ADDITIONAL_ARGS are $ADDITIONAL_ARGS
-    # yamllint disable-line rule:line-length
-    - ansible-playbook $ANSIBLE_PLAYBOOK -i infra/inventory.yaml --extra-vars "git_sha=$CI_COMMIT_SHA" --vault-password-file $vaultpassword $BASE_ARGS $EXTRA_ARGS $ADDITIONAL_ARGS
+    # seds
+    - find k8s -type f -name \*.yaml -exec sed -i "s|__NAMESPACE_NAME__|"$NAMESPACE"|g" {} +
+    - find k8s -type f -name \*.yaml -exec sed -i "s|__INSTANCE_SUFFIX__|"$INSTANCE_SUFFIX"|g" {} +
+    - find k8s -type f -name \*.yaml -exec sed -i "s|__TO_BE_REPLACED_BY_IMAGE_TAG__|"$IMAGE_TAG"|g" {} +
+    - find k8s -type f -name \*.yaml -exec sed -i "s|__PEER_ID__|"$PEER_ID"|g" {} +
+    - find k8s -type f -name \*.yaml -exec sed -i "s|__PEER_PRIVATE_KEY__|"$PEER_PRIVATE_KEY"|g" {} +
+    - find k8s -type f -name \*.yaml -exec sed -i "s|__PEER_PUBLIC_KEY__|"$PEER_PUBLIC_KEY"|g" {} +
+    - find k8s -type f -name \*.yaml -exec sed -i "s|__PEER_DEBUG__|"$PEER_DEBUG"|g" {} +
+    - find k8s -type f -name \*.yaml -exec sed -i "s|__BOOTSTRAP_PEER__|"$BOOTSTRAP_PEER"|g" {} +
 
-server_1_initial:
-  extends: .run_playbook
-  variables:
-    ANSIBLE_PLAYBOOK: infra/playbooks/node-setup.yaml
-    EXTRA_ARGS: --limit ws-proxy-server-1
-  environment: ws-proxy-server-1
+    # applying the files
+    - kubectl apply -f k8s/common/namespace.yaml
+    - kubectl apply -f k8s/common/secret.yaml
+    - kubectl apply -f k8s/$DEPLOYMENT_TYPE/ --recursive
+    - kubectl apply -f k8s/common/ --recursive
 
-server_2_initial:
-  extends: .run_playbook
+.deploy-script-dev:
+  extends: 
+    - .run_dev_rules
+    - .deploy-script
   variables:
-    ANSIBLE_PLAYBOOK: infra/playbooks/node-setup.yaml
-    EXTRA_ARGS: --limit ws-proxy-server-2
-  environment: ws-proxy-server-2
+    IMAGE_TAG: $GOOGLE_TAG_DEV
+    DEPLOYMENT_TYPE: "development"
 
-server_1_update:
-  extends: .run_playbook
+.deploy-script-prod:
+  extends: 
+    - .run_prod_rules
+    - .deploy-script
   variables:
-    ANSIBLE_PLAYBOOK: infra/playbooks/node-setup.yaml
-    EXTRA_ARGS: --tags=update --limit ws-proxy-server-1
-  environment: ws-proxy-server-1
-
-server_2_update:
-  extends: .run_playbook
-  variables:
-    ANSIBLE_PLAYBOOK: infra/playbooks/node-setup.yaml
-    EXTRA_ARGS: --tags=update --limit ws-proxy-server-2
-  environment: ws-proxy-server-2
-
-server_1_any_playbook:
-  extends: .run_playbook
-  variables:
-    EXTRA_ARGS: --limit ws-proxy-server-1
-  environment: ws-proxy-server-1
-
-server_2_any_playbook:
-  extends: .run_playbook
-  variables:
-    EXTRA_ARGS: --limit ws-proxy-server-2
-  environment: ws-proxy-server-2
+    IMAGE_TAG: $GOOGLE_TAG
+    DEPLOYMENT_TYPE: "production"
