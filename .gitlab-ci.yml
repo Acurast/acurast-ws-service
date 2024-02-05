@@ -49,7 +49,7 @@ include:
     - .base_before_script
     - .dev_variables
   rules:
-    - if: '$CI_COMMIT_BRANCH == "feat/k8s_deployment"'
+    - if: '$CI_COMMIT_BRANCH == "feat/libp2p"'
 
 test:
   stage: test
