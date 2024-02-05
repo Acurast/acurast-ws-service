@@ -3,8 +3,9 @@ import { SchedulerElement } from './scheduler-element'
 
 export abstract class AbstractScheduler<T extends SchedulerElement> {
   private queue: Map<string, T[]> = new Map()
-  private lastCleanup: number = 0
-  timeframe: number = proxyConfigReader('schedulerTimeframe', 60000)
+  protected lastCleanup: number = 0
+  protected limitSize: number = proxyConfigReader('scheduler.size', 20)
+  protected timeframe: number = proxyConfigReader('scheduler.timeframe', 60000)
 
   /**
    * Removes all expired entries
@@ -28,21 +29,34 @@ export abstract class AbstractScheduler<T extends SchedulerElement> {
 
     this.lastCleanup = now
   }
+
   /**
-   * Add an entry to the queue
+   * Stores entries up to limitSize (inclusive)
+   * @param list the list queued
+   * @param entry a new entry to store
+   */
+  protected insert(list: T[], entry: T) {
+    if (list.length === this.limitSize) {
+      list.shift()
+    }
+    list.push(entry)
+  }
+
+  /**
+   * Adds an entry to the queue
    * @param key unique id
    * @param entry a SchedulerElement object
    */
   add(key: string, entry: T) {
     if (this.queue.has(key)) {
-      this.queue.get(key)!.push(entry)
+      this.insert(this.queue.get(key)!, entry)
     } else {
       this.queue.set(key, [entry])
     }
   }
 
   /**
-   * Append an array of objects
+   * Appends an array of objects
    * @param key uinque id
    * @param entries a list of SchedulerElement objects
    */
@@ -50,23 +64,23 @@ export abstract class AbstractScheduler<T extends SchedulerElement> {
     entries.forEach((entry) => this.add(key, entry))
   }
 
-  /**
+  /** Retrieves the bottom element of the queue
    * @param key unique id
-   * @returns the latest inserted entry and removes it from the queue
+   * @returns the bottom entry and removes it from the queue
    */
-  getLatest(key: string) {
+  getLast(key: string) {
     return this.queue.get(key)?.pop()
   }
 
-  /**
+  /** Retrieves the top element of the queue
    * @param key unique id
-   * @returns the oldest inserted entry and removes it from the queue
+   * @returns the top entry and removes it from the queue
    */
-  getOldest(key: string) {
+  getFirst(key: string) {
     return this.queue.get(key)?.shift()
   }
 
-  /**
+  /** Retrieves all entries from the queue if key exists
    * @param key unique id
    * @returns all the entries and removes them from the queue
    */

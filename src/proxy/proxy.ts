@@ -10,40 +10,23 @@ import {
   type RespondProcessorAction
 } from '../processor/message-processor'
 import { hexFrom } from '../utils/bytes'
-import { MessageScheduler } from '../scheduler/message-scheduler'
 import Permissions from '../permissions/permissions'
-import { ConnectionDataInitializer } from '../conection-data/connection-data-initializer'
+import { ConnectionDataInitializer } from '../connection-data/connection-data-initializer'
 import { AbstractProxy } from './abstract-proxy'
-import { PeerHandlers } from '../peer/peer-handlers'
 import { Logger } from '../utils/Logger'
+import { PeerEvent } from '../peer/peer-event'
+import { MessageScheduler } from '../scheduler/message-scheduler'
 
 export class Proxy extends AbstractProxy {
-  protected override handleMessage(message: Uint8Array) {
-    Logger.debug('Proxy', 'handleMessage', 'begin')
-    const parsed = parseMessage(message)
-
-    if (!parsed) {
+  protected override onNetworkMessage({ id, message }: PeerEvent<Uint8Array>): void {
+    Logger.debug('Proxy', 'onNetworkMessage', 'begin')
+    if (!this.webSockets.has(id)) {
       return
     }
 
-    const recipient = hexFrom(parsed.recipient)
-    const socket = this.webSockets.get(recipient)
-
-    MessageScheduler.instance.cleanup()
-
-    if (!socket) {
-      MessageScheduler.instance.add(recipient, { message, timestamp: Date.now() })
-    } else {
-      this.listener.broadcast(PeerHandlers.MESSAGE_CLEANUP, parsed.recipient)
-      socket.send(message)
-    }
-    Logger.debug('Proxy', 'handleMessage', 'end')
-  }
-
-  protected override cleanupMessages(sender: Uint8Array): void {
-    Logger.debug('Proxy', 'cleanupMessages', 'begin')
-    MessageScheduler.instance.getAll(hexFrom(sender))
-    Logger.debug('Proxy', 'cleanupMessages', 'end')
+    MessageScheduler.instance.add(id, { message: parseMessage(message)!, timestamp: Date.now() })
+    this.webSockets.get(id)?.send(message)
+    Logger.debug('Proxy', 'onNetworkMessage', 'end')
   }
 
   public async onMessage(ws: WebSocket, bytes: Buffer): Promise<void> {
@@ -94,37 +77,46 @@ export class Proxy extends AbstractProxy {
     Logger.debug('Proxy', 'reset', 'begin')
     const sender: string | undefined = this.webSocketsReversed.get(ws)
     this.webSocketsReversed.delete(ws)
-    if (sender !== undefined) {
-      const details: string = reason.length > 0 ? `${code}: ${reason}` : code.toString()
-      Logger.log(sender, `closed connection (${details})`)
 
-      this.webSockets.delete(sender)
-      this.webSocketsData.delete(sender)
-      Object.values(this.processors).forEach((processor: MessageProcessor) => {
-        void processor.onClosed(Buffer.from(sender, 'hex'))
-      })
+    if (!sender) {
+      return
     }
+
+    const details: string = reason.length > 0 ? `${code}: ${reason}` : code.toString()
+    Logger.log(sender, `closed connection (${details})`)
+
+    this.webSockets.delete(sender)
+    this.webSocketsData.delete(sender)
+    this.listener.removeListener(sender)
+    Object.values(this.processors).forEach((processor: MessageProcessor) => {
+      void processor.onClosed(Buffer.from(sender, 'hex'))
+    })
+
+    this.prepareConnectionCleanup(sender)
+
     Logger.debug('Proxy', 'reset', 'end')
   }
 
   private onRegister(action: RegisterProcessorAction, ws: WebSocket): void {
     Logger.debug('Proxy', 'onRegister', 'begin')
     const sender: string = hexFrom(action.sender)
+
+    this.removeConnectionCleanup(sender)
+
     this.webSockets.set(sender, ws)
     this.webSocketsReversed.set(ws, sender)
     this.webSocketsData.set(
       sender,
       ConnectionDataInitializer.initialize(action.message as InitMessage)
     )
+    this.listener.listen(sender)
 
     if (!action.message) {
       return
     }
 
     this.send(ws, action.message)
-
-    MessageScheduler.instance.getAll(sender)?.forEach((msg) => ws.send(msg.message))
-    this.listener.broadcast(PeerHandlers.MESSAGE_CLEANUP, action.sender)
+    MessageScheduler.instance.getAll(sender)?.forEach((msg) => this.send(ws, msg.message))
     Logger.debug('Proxy', 'onRegister', 'end')
   }
 
@@ -140,18 +132,13 @@ export class Proxy extends AbstractProxy {
 
     Logger.log('Sending', action.message, 'to', recipient)
 
-    const ws: WebSocket | undefined = this.webSockets.get(recipient)
+    MessageScheduler.instance.add(recipient, { message: action.message, timestamp: Date.now() })
 
-    if (ws === undefined) {
-      if (action.message.type === 'payload') {
-        const message = forgeMessage(action.message)
-        MessageScheduler.instance.add(recipient, { message, timestamp: Date.now() })
-        this.listener.broadcast(PeerHandlers.FOWARD_MESSAGE, message)
-      }
-      return
-    }
-
-    this.send(ws, action.message)
+    this.listener.send(recipient, forgeMessage(action.message)).catch((err: any) => {
+      Logger.error(err.message)
+      this.prepareConnectionCleanup(hexFrom(action.message.sender))
+      Sentry.captureException(err)
+    })
 
     Logger.log('Sent', action.message, 'to', recipient, 'successfully')
     Logger.debug('Proxy', 'onSend', 'end')
@@ -163,6 +150,7 @@ export class Proxy extends AbstractProxy {
       ws.send(forgeMessage(message))
     } catch (err: any) {
       Logger.error('Sending', message, 'to', message.recipient, 'failed', err.message)
+      this.prepareConnectionCleanup(hexFrom(message.sender))
       Sentry.captureException(err)
     }
     Logger.debug('Proxy', 'send', 'end')
