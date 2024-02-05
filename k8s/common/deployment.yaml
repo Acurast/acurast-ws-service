@@ -2,30 +2,30 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: __NAMESPACE_NAME__
+  name: __NAMESPACE_NAME____INSTANCE_SUFFIX__
   namespace: __NAMESPACE_NAME__
 spec:
   selector:
     matchLabels:
-      app: __NAMESPACE_NAME__
+      app: __NAMESPACE_NAME____INSTANCE_SUFFIX__
   strategy:
     type: Recreate
   template:
     metadata:
       labels:
-        app: __NAMESPACE_NAME__
+        app: __NAMESPACE_NAME____INSTANCE_SUFFIX__
     spec:
       containers:
         - image: __TO_BE_REPLACED_BY_IMAGE_TAG__
           imagePullPolicy: IfNotPresent
-          name: __NAMESPACE_NAME__-backend
-          # envFrom:
-          #   - configMapRef:
-          #       name: __NAMESPACE_NAME__-config-map
-          #   - secretRef:
-          #       name: __NAMESPACE_NAME__-secret
+          name: __NAMESPACE_NAME____INSTANCE_SUFFIX__
+          volumeMounts:
+          - name: config-secret
+            mountPath: /config
+            readOnly: true
           ports:
             - containerPort: 9001
+            - containerPort: 50000
           readinessProbe:
             httpGet:
               path: /
@@ -45,4 +45,11 @@ spec:
             limits:
               cpu: '0.1'
               memory: 400Mi
+      volumes:
+        - name: config-secret
+          secret:
+            secretName: __NAMESPACE_NAME____INSTANCE_SUFFIX__-secret
+            items:
+            - key: acurast.proxy.config.json
+              path: acurast.proxy.config.json
       restartPolicy: Always
