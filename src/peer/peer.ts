@@ -1,4 +1,8 @@
+import { PeerHandlers } from "./peer-handlers"
+
 export interface Peer {
-  stop: () => Promise<void>
-  broadcast: (protocol: string, payload: Uint8Array) => Promise<void>
+  stop: () => void
+  send: (sender: PeerHandlers, payload: Uint8Array) => void
+  listen: (recipient: string) => void
+  removeListener: (sender: string) => void
 }

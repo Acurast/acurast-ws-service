@@ -5,13 +5,14 @@ import WebSocket from 'ws'
 
 import { Proxy } from './proxy/proxy'
 import { Logger } from './utils/Logger'
+import { proxyConfigReader } from './proxy-reader'
 import { initSentry } from './init-sentry'
 
 const app: Express = express()
 const proxy: Proxy = new Proxy()
 const wss = new WebSocket.Server({ noServer: true, clientTracking: true })
 const isAlive: Map<WebSocket, number> = new Map()
-const timeout: number = 600000
+const timeout: number = proxyConfigReader('scheduler.timeframe', 30000)
 
 initSentry(app)
 
@@ -64,6 +65,7 @@ const ping = setInterval(() => {
     ws.terminate()
     isAlive.delete(ws)
   })
+  proxy.cleanup()
 }, timeout)
 
 wss.on('close', () => {
