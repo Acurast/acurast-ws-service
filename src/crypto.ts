@@ -19,4 +19,9 @@ export class Crypto {
       s: signature.subarray(32)
     })
   }
+
+  public senderId(publicKey: Uint8Array): Uint8Array {
+    const pkh = this.sha256(publicKey)
+    return pkh.slice(0, 16)
+  }
 }

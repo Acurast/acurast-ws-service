@@ -1,3 +1,4 @@
+---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -9,21 +10,21 @@ metadata:
     nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
     nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
     nginx.kubernetes.io/proxy-body-size: 500m
-  name: __NAMESPACE_NAME__
+  name: __NAMESPACE_NAME____INSTANCE_SUFFIX__
   namespace: __NAMESPACE_NAME__
 spec:
   rules:
-    - host: __NAMESPACE_NAME__.dev.gke.papers.tech
+    - host: __NAMESPACE_NAME____INSTANCE_SUFFIX__.dev.gke.acurast.com
       http:
         paths:
           - backend:
               service:
-                name: __NAMESPACE_NAME__-service
+                name: __NAMESPACE_NAME____INSTANCE_SUFFIX__-service
                 port:
                   number: 9001
             path: /
             pathType: Prefix
   tls:
     - hosts:
-        - __NAMESPACE_NAME__.dev.gke.papers.tech
-      secretName: __NAMESPACE_NAME__-tls
+        - __NAMESPACE_NAME____INSTANCE_SUFFIX__.dev.gke.acurast.com
+      secretName: __NAMESPACE_NAME____INSTANCE_SUFFIX__-tls

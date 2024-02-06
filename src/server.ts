@@ -3,18 +3,25 @@ import { type IncomingMessage } from 'http'
 import { type Duplex } from 'stream'
 import WebSocket from 'ws'
 
-import { Proxy } from './proxy'
+import { Proxy } from './proxy/proxy'
+import { Logger } from './utils/Logger'
+import { proxyConfigReader } from './proxy-reader'
+import { initSentry } from './init-sentry'
 
 const app: Express = express()
 const proxy: Proxy = new Proxy()
 const wss = new WebSocket.Server({ noServer: true, clientTracking: true })
+const isAlive: Map<WebSocket, number> = new Map()
+const timeout: number = proxyConfigReader('scheduler.timeframe', 30000)
 
-const isAlive: Map<WebSocket, boolean> = new Map()
+initSentry(app)
 
 wss.on('connection', (ws: WebSocket) => {
   ws.binaryType = 'nodebuffer'
 
   ws.on('message', (data: WebSocket.RawData) => {
+    Logger.debug('server', 'ws.message', 'begin')
+    isAlive.set(ws, Date.now())
     const bytes: Buffer | undefined = Buffer.isBuffer(data)
       ? data
       : data instanceof ArrayBuffer
@@ -22,17 +29,21 @@ wss.on('connection', (ws: WebSocket) => {
       : undefined
 
     if (bytes !== undefined) {
-      void proxy.onMessage(ws, bytes)
+      proxy.onMessage(ws, bytes)
     }
+
+    Logger.debug('server', 'ws.message', 'end')
   })
 
   ws.on('pong', () => {
-    isAlive.set(ws, true)
+    isAlive.set(ws, Date.now())
   })
 
   ws.on('close', (code: number, reason: Buffer) => {
+    Logger.debug('server', 'ws.close', 'begin')
     isAlive.delete(ws)
     proxy.reset(code, reason.toString('utf-8'), ws)
+    Logger.debug('server', 'ws.close', 'end')
   })
 
   ws.on('error', (error: Error) => {
@@ -45,20 +56,23 @@ wss.on('error', (error: Error) => {
 })
 
 const ping = setInterval(() => {
+  const now = Date.now()
   wss.clients.forEach((ws: WebSocket) => {
-    if (isAlive.get(ws) === false) {
-      ws.terminate()
-      isAlive.delete(ws)
+    if (now - (isAlive.get(ws) ?? 0) < timeout) {
+      ws.ping()
       return
     }
-
-    isAlive.set(ws, false)
-    ws.ping()
+    ws.terminate()
+    isAlive.delete(ws)
   })
-}, 60 * 1000)
+  proxy.cleanup()
+}, timeout)
 
 wss.on('close', () => {
+  Logger.debug('server', 'close', 'begin')
   clearInterval(ping)
+  proxy.destroy()
+  Logger.debug('server', 'close', 'end')
 })
 
 app.get('/*', (_req: Request, res: Response) => {
@@ -67,7 +81,7 @@ app.get('/*', (_req: Request, res: Response) => {
 })
 
 const server = app.listen(9001, () => {
-  console.log('Acurast WebSocket Proxy listening on port 9001')
+  Logger.log('Acurast WebSocket Proxy listening on port 9001')
 })
 
 server.on('upgrade', (request: IncomingMessage, socket: Duplex, head: Buffer) => {

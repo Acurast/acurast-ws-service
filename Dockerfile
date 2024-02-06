@@ -6,7 +6,7 @@ COPY yarn.lock ./
 
 RUN yarn install
 COPY . .
-RUN yarn build
+RUN npm run build 
 
 EXPOSE 9001
-CMD ["yarn", "start"]
+CMD ["yarn", "start:prod"]
