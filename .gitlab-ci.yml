@@ -43,14 +43,6 @@ include:
       needs_config: "publish-image-production"
       reference: ".deploy-script-prod"
 
-# FIXME:remove before merging to dev / main
-.run_dev_rules:
-  extends:
-    - .base_before_script
-    - .dev_variables
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "feat/libp2p"'
-
 test:
   stage: test
   script:
