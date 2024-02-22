@@ -5,7 +5,6 @@ import * as Sentry from '@sentry/node'
 import {
   type MessageProcessor,
   type RegisterProcessorAction,
-  type ProcessorAction,
   type SendProcessorAction,
   type RespondProcessorAction
 } from '../processor/message-processor'
@@ -29,7 +28,7 @@ export class Proxy extends AbstractProxy {
     Logger.debug('Proxy', 'onNetworkMessage', 'end')
   }
 
-  public async onMessage(ws: WebSocket, bytes: Buffer): Promise<void> {
+  public onMessage(ws: WebSocket, bytes: Buffer) {
     Logger.debug('Proxy', 'onMessage', 'begin')
     const message: Message | undefined = parseMessage(bytes)
     if (message === undefined) {
@@ -58,18 +57,28 @@ export class Proxy extends AbstractProxy {
       return
     }
 
-    const action: ProcessorAction | undefined = await processor.processMessage(message)
-    switch (action?.type) {
-      case 'register':
-        this.onRegister(action, ws)
-        break
-      case 'respond':
-        this.onRespond(action, ws)
-        break
-      case 'send':
-        this.onSend(action)
-        break
-    }
+    processor
+      .processMessage(message)
+      .then((action) => {
+        switch (action?.type) {
+          case 'register':
+            this.onRegister(action, ws)
+            break
+          case 'respond':
+            this.onRespond(action, ws)
+            break
+          case 'send':
+            this.onSend(action)
+            break
+          default:
+            break
+        }
+      })
+      .catch((err) => {
+        Logger.error(err.message)
+        Sentry.captureException(err)
+      })
+
     Logger.debug('Proxy', 'onMessage', 'end')
   }
 
@@ -131,8 +140,6 @@ export class Proxy extends AbstractProxy {
     const recipient: string = hexFrom(action.message.recipient)
 
     Logger.log('Sending', action.message, 'to', recipient)
-
-    MessageScheduler.instance.add(recipient, { message: action.message, timestamp: Date.now() })
 
     this.listener.send(recipient, forgeMessage(action.message)).catch((err: any) => {
       Logger.error(err.message)
