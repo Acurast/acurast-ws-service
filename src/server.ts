@@ -56,9 +56,8 @@ wss.on('error', (error: Error) => {
 })
 
 const ping = setInterval(() => {
-  const now = Date.now()
   wss.clients.forEach((ws: WebSocket) => {
-    if (now - (isAlive.get(ws) ?? 0) >= timeout) {
+    if (Date.now() - (isAlive.get(ws) ?? 0) >= timeout) {
       ws.ping()
       return
     }
