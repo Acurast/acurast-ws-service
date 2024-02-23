@@ -1,5 +1,5 @@
 {
-  "instanceName": "proxy-0",
+  "instanceName": "localhost",
   "permissions": {
     "allowList": [],
     "denyList": []
@@ -12,10 +12,15 @@
     "privKey": "CAESQOYsk10QTqqtp9gGSt1TZ3bNJ1NEMUSXdJfb7JslbEq262HNKWZd/ppjRHXs3XuQgqJQc7kzBEQmzghEnxxno5g=",
     "pubKey": "CAESIOthzSlmXf6aY0R17N17kIKiUHO5MwREJs4IRJ8cZ6OY"
   },
-  "port": 50000,
   "scheduler": {
-    "timeframe": 60000,
+    "interval": 30000,
     "size": 20
   },
+  "pubsub": {
+    "ignore": ["_peer-discovery._p2p._pubsub"],
+    "init": [],
+    "interval": 3000
+  },
+  "port": 50000,
   "debug": true
 }
