@@ -5,7 +5,7 @@ export abstract class AbstractScheduler<T extends SchedulerElement> {
   private queue: Map<string, T[]> = new Map()
   protected lastCleanup: number = 0
   protected limitSize: number = proxyConfigReader('scheduler.size', 20)
-  protected timeframe: number = proxyConfigReader('scheduler.timeframe', 60000)
+  protected interval: number = proxyConfigReader('scheduler.interval', 60000)
 
   /**
    * Removes all expired entries
@@ -13,12 +13,12 @@ export abstract class AbstractScheduler<T extends SchedulerElement> {
   cleanup() {
     const now = Date.now()
 
-    if (now - this.lastCleanup < this.timeframe) {
+    if (now - this.lastCleanup < this.interval) {
       return
     }
 
     Array.from(this.queue.keys()).forEach((key) => {
-      const list = this.queue.get(key)!.filter((msg) => now - msg.timestamp <= this.timeframe)
+      const list = this.queue.get(key)!.filter((msg) => now - msg.timestamp <= this.interval)
 
       if (!list.length) {
         this.queue.delete(key)

@@ -11,7 +11,7 @@ import { proxyConfigReader } from '../proxy-reader'
 
 export abstract class AbstractProxy {
   private subscriptions: Subscription[] = []
-  private timeout: number = proxyConfigReader('scheduler.timeframe', 30000)
+  private timeout: number = proxyConfigReader('scheduler.interval', 30000)
   protected readonly processors: Record<number, MessageProcessor> = {
     1: new V1MessageProcessor()
   }
@@ -48,6 +48,7 @@ export abstract class AbstractProxy {
       sender,
       setTimeout(() => {
         MessageScheduler.instance.getAll(sender)
+        this.webSocketsTimeouts.delete(sender)
       }, this.timeout)
     )
   }
