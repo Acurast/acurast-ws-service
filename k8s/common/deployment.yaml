@@ -31,13 +31,13 @@ spec:
               path: /
               port: 9001
             initialDelaySeconds: 30
-            timeoutSeconds: 30
+            timeoutSeconds: 60
           livenessProbe:
             httpGet:
               path: /
               port: 9001
             initialDelaySeconds: 30
-            timeoutSeconds: 30
+            timeoutSeconds: 60
           resources:
             requests:
               cpu: '0.1'
