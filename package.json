@@ -6,7 +6,7 @@
   "scripts": {
     "build": "rm -rf ./dist && tsc",
     "start": "npm run build && node dist/server.js",
-    "start:prod": "cp /config/acurast.proxy.config.json ./dist/ && node dist/server.js",
+    "start:prod": "cp /config/acurast.proxy.config.json ./dist/ && node --prof dist/server.js",
     "test": "TS_NODE_PROJECT=\"tests/tsconfig.json\" mocha -r ts-node/register \"tests/specs/**/*.spec.ts\"",
     "test:ci": "nyc -r lcov -e .ts -x \"*.spec.ts\" yarn test"
   },
