@@ -1,7 +1,7 @@
 import express, { type Express, type Request, type Response } from 'express'
 import { type IncomingMessage } from 'http'
 import { type Duplex } from 'stream'
-import WebSocket from 'ws'
+import WebSocket, { AddressInfo } from 'ws'
 
 import { Proxy } from './proxy/proxy'
 import { Logger } from './utils/Logger'
@@ -58,7 +58,7 @@ app.get('/*', (_req: Request, res: Response) => {
 })
 
 const server = app.listen(9001, () => {
-  Logger.log('Acurast WebSocket Proxy listening on port 9001')
+  Logger.log(`Acurast WebSocket Proxy listening on port ${(server.address() as AddressInfo).port}`)
 })
 
 server.on('upgrade', (request: IncomingMessage, socket: Duplex, head: Buffer) => {

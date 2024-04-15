@@ -126,11 +126,11 @@ export abstract class AbstractPeer extends Observable<PeerEvent<Uint8Array>> imp
   }
 
   listen(sender: string) {
-    return this.node.services.pubsub.subscribe(sender)
+    this.node.services.pubsub.subscribe(sender)
   }
 
   removeListener(sender: string) {
-    return this.node.services.pubsub.unsubscribe(sender)
+    this.node.services.pubsub.unsubscribe(sender)
   }
 
   protected ping() {
