@@ -44,7 +44,7 @@ spec:
               memory: 400Mi
             limits:
               cpu: '1'
-              memory: 400Mi
+              memory: 1Gi
       volumes:
         - name: config-secret
           secret:
