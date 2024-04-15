@@ -23,7 +23,7 @@ const handlePublish = (topic: string, message?: Message) => {
   }
 
   listener.send(topic, forgeMessage(message)).catch((err: any) => {
-    Logger.error(err.message)
+    Logger.error('recipient:', topic, 'error:', err.message)
     parentPort?.postMessage({
       error: true,
       message: err.message,
