@@ -3,10 +3,20 @@ import { parentPort } from 'worker_threads'
 import { ProcessorWorkerRequest } from '../worker-types'
 import { Logger } from '../../utils/Logger'
 import * as Sentry from '@sentry/node'
+import { MessageProcessor } from '../../processor/message-processor'
 
-const processor = new V1MessageProcessor()
+const processors: Record<number, MessageProcessor> = {
+  1: new V1MessageProcessor()
+}
 
 parentPort?.on('message', async ({ message, senderId }: ProcessorWorkerRequest) => {
+  const processor: MessageProcessor | undefined = processors[message.version]
+  
+  if (processor === undefined) {
+    Logger.log('Message version', message.version, 'not supported')
+    return
+  }
+
   processor
     .processMessage(message)
     .then((action) => parentPort?.postMessage({ action, senderId }))
