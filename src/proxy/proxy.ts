@@ -58,15 +58,15 @@ export class Proxy extends AbstractProxy {
   protected override listenerWorkerHandler(data: WorkerError | PeerEvent<Uint8Array>): void {
     const err = data as WorkerError
 
-    if (err.error) {
-      const sender = hexFrom(err.data)
-      this.prepareConnectionCleanup(sender)
-      if (err.message === 'PublishError.NoPeersSubscribedToTopic' && this.webSockets.has(sender)) {
-        const ws = this.webSockets.get(sender)!
-        ws.close(1011, 'No receipient found in the network.')
-      }
-      return
-    }
+    // if (err.error) {
+    //   const sender = hexFrom(err.data)
+    //   if (err.message === 'PublishError.NoPeersSubscribedToTopic' && this.webSockets.has(sender)) {
+    //     this.prepareConnectionCleanup(sender)
+    //     const ws = this.webSockets.get(sender)!
+    //     ws.close(1011, 'No receipient found in the network.')
+    //   }
+    //   return
+    // }
 
     this.onNetworkMessage(data as PeerEvent<Uint8Array>)
   }
