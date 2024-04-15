@@ -61,7 +61,7 @@ export class Proxy extends AbstractProxy {
     if (err.error) {
       const sender = hexFrom(err.data)
       this.prepareConnectionCleanup(sender)
-      if (err.message === 'PublishError.NoPeersSubscribedToTopic') {
+      if (err.message === 'PublishError.NoPeersSubscribedToTopic' && this.webSockets.has(sender)) {
         const ws = this.webSockets.get(sender)!
         ws.close(1011, 'No receipient found in the network.')
       }
