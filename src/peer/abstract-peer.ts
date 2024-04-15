@@ -17,7 +17,6 @@ const dynamicLoader = async (): Promise<any> => ({
   mplex: (await import('@libp2p/mplex')).mplex,
   mdns: (await import('@libp2p/mdns')).mdns,
   bootstrap: (await import('@libp2p/bootstrap')).bootstrap,
-  // pubsubPeerDiscovery: (await import('@libp2p/pubsub-peer-discovery')).pubsubPeerDiscovery,
   gossipsub: (await import('@chainsafe/libp2p-gossipsub')).gossipsub,
   identify: (await import('@libp2p/identify')).identify,
   dcutr: (await import('@libp2p/dcutr')).dcutr
@@ -50,7 +49,6 @@ export abstract class AbstractPeer extends Observable<PeerEvent<Uint8Array>> imp
       mplex,
       bootstrap,
       mdns,
-      // pubsubPeerDiscovery,
       gossipsub,
       identify,
       dcutr
@@ -64,8 +62,6 @@ export abstract class AbstractPeer extends Observable<PeerEvent<Uint8Array>> imp
       : mdns({
           interval: 3000
         })
-    // const pubsubInterval = proxyConfigReader<number>('pubsub.interval', 3000)
-    // const pubsubTopics = proxyConfigReader<string[]>('pubsub.init', [])
 
     const node = await createLibp2p({
       peerId,
@@ -78,15 +74,11 @@ export abstract class AbstractPeer extends Observable<PeerEvent<Uint8Array>> imp
       },
       peerDiscovery: [
         discoveryMechanism
-        // pubsubPeerDiscovery({
-        //   interval: pubsubInterval,
-        //   topics: pubsubTopics
-        // })
       ],
       services: {
         identify: identify(),
         pubsub: gossipsub({
-          allowPublishToZeroPeers: true,
+          // allowPublishToZeroTopicPeers: true,
           emitSelf: true,
           doPX: true
         }),
