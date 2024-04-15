@@ -15,8 +15,62 @@ import { AbstractProxy } from './abstract-proxy'
 import { Logger } from '../utils/Logger'
 import { PeerEvent } from '../peer/peer-event'
 import { MessageScheduler } from '../scheduler/message-scheduler'
+import {
+  ListenerWorkerAction,
+  ProcessorWorkerResponse,
+  WorkerError,
+  WorkerType
+} from '../worker/worker-types'
 
 export class Proxy extends AbstractProxy {
+  protected override processorWorkerHandler(data: ProcessorWorkerResponse | WorkerError): void {
+    {
+      const err = data as WorkerError
+
+      if (err.error && this.pendingConnections.has(err.message)) {
+        this.pendingConnections.get(err.message)!.close(1011, 'Challenge failed.')
+        this.pendingConnections.delete(err.message)
+        return
+      }
+
+      const { action, senderId } = data as ProcessorWorkerResponse
+
+      const ws = this.webSockets.has(senderId)
+        ? this.webSockets.get(senderId)!
+        : this.pendingConnections.get(senderId)!
+
+      switch (action?.type) {
+        case 'register':
+          this.onRegister(action, ws)
+          break
+        case 'respond':
+          this.onRespond(action, ws)
+          break
+        case 'send':
+          this.onSend(action)
+          break
+        default:
+          break
+      }
+    }
+  }
+
+  protected override listenerWorkerHandler(data: WorkerError | PeerEvent<Uint8Array>): void {
+    const err = data as WorkerError
+
+    if (err.error) {
+      const sender = hexFrom(err.data)
+      this.prepareConnectionCleanup(sender)
+      if (err.message === 'PublishError.NoPeersSubscribedToTopic') {
+        const ws = this.webSockets.get(sender)!
+        ws.close(1011, 'No receipient found in the network.')
+      }
+      return
+    }
+
+    this.onNetworkMessage(data as PeerEvent<Uint8Array>)
+  }
+
   protected override onNetworkMessage({ id, message }: PeerEvent<Uint8Array>): void {
     Logger.debug('Proxy', 'onNetworkMessage', 'begin')
     if (!this.webSockets.has(id)) {
@@ -51,33 +105,14 @@ export class Proxy extends AbstractProxy {
 
     Logger.log('Got message', message)
 
-    const processor: MessageProcessor | undefined = this.processors[message.version]
-    if (processor === undefined) {
-      Logger.log('Message version', message.version, 'not supported')
-      return
+    if (message.type === 'init') {
+      this.pendingConnections.set(senderStr, ws)
     }
 
-    processor
-      .processMessage(message)
-      .then((action) => {
-        switch (action?.type) {
-          case 'register':
-            this.onRegister(action, ws)
-            break
-          case 'respond':
-            this.onRespond(action, ws)
-            break
-          case 'send':
-            this.onSend(action)
-            break
-          default:
-            break
-        }
-      })
-      .catch((err) => {
-        Logger.error(err.message)
-        Sentry.captureException(err)
-      })
+    this.pool.postMessage(WorkerType.PROCESSOR, {
+      message,
+      senderId: senderStr
+    })
 
     Logger.debug('Proxy', 'onMessage', 'end')
   }
@@ -96,7 +131,10 @@ export class Proxy extends AbstractProxy {
 
     this.webSockets.delete(sender)
     this.webSocketsData.delete(sender)
-    this.listener.removeListener(sender)
+    this.pool.postMessage(WorkerType.LISTENER, {
+      action: ListenerWorkerAction.UNSUBSCRIBE,
+      topic: sender
+    })
     Object.values(this.processors).forEach((processor: MessageProcessor) => {
       void processor.onClosed(Buffer.from(sender, 'hex'))
     })
@@ -113,12 +151,17 @@ export class Proxy extends AbstractProxy {
     this.removeConnectionCleanup(sender)
 
     this.webSockets.set(sender, ws)
+    this.pendingConnections.delete(sender)
     this.webSocketsReversed.set(ws, sender)
     this.webSocketsData.set(
       sender,
       ConnectionDataInitializer.initialize(action.message as InitMessage)
     )
-    this.listener.listen(sender)
+
+    this.pool.postMessage(WorkerType.LISTENER, {
+      action: ListenerWorkerAction.SUBSCRIBE,
+      topic: sender
+    })
 
     if (!action.message) {
       return
@@ -141,11 +184,15 @@ export class Proxy extends AbstractProxy {
 
     Logger.log('Sending', action.message, 'to', recipient)
 
-    this.listener.send(recipient, forgeMessage(action.message)).catch((err: any) => {
-      Logger.error(err.message)
-      this.prepareConnectionCleanup(hexFrom(action.message.sender))
-      Sentry.captureException(err)
-    })
+    if (this.webSockets.has(recipient)) {
+      this.send(this.webSockets.get(recipient)!, action.message)
+    } else {
+      this.pool.postMessage(WorkerType.LISTENER, {
+        action: ListenerWorkerAction.PUBLISH,
+        topic: recipient,
+        message: action.message
+      })
+    }
 
     Logger.log('Sent', action.message, 'to', recipient, 'successfully')
     Logger.debug('Proxy', 'onSend', 'end')
