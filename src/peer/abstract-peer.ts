@@ -79,7 +79,7 @@ export abstract class AbstractPeer extends Observable<PeerEvent<Uint8Array>> imp
         identify: identify(),
         pubsub: gossipsub({
           // allowPublishToZeroTopicPeers: true,
-          emitSelf: true,
+          // emitSelf: true,
           doPX: true
         }),
         dcutr: dcutr()
