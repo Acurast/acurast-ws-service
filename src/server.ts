@@ -77,7 +77,8 @@ server.on('upgrade', (request: IncomingMessage, socket: Duplex, head: Buffer) =>
   //   return
   // }
 
-  console.log('ip addr:', request.socket.remoteAddress)
+  console.log('headers:', request.headers['x-forwarded-for'])
+  console.log('socket:', request.socket.remoteAddress)
   wss.handleUpgrade(request, socket, head, (ws: WebSocket) => {
     wss.emit('connection', ws, request)
   })

@@ -10,6 +10,7 @@ metadata:
     nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
     nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
     nginx.kubernetes.io/proxy-body-size: 500m
+    nginx.ingress.kubernetes.io/use-forwarded-headers: "true"
   name: __NAMESPACE_NAME____INSTANCE_SUFFIX__
   namespace: __NAMESPACE_NAME__
 spec:
