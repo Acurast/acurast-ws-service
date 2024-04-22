@@ -18,13 +18,7 @@ initSentry(app)
 wss.on('connection', (ws: WebSocket, req) => {
   ws.binaryType = 'nodebuffer'
 
-  const ip = req.socket.remoteAddress! // if undefined, the line below will return an error
-  const error = validateConnection(connectedClients, ip)
-
-  if (error) {
-    ws.close(error.code, error.message)
-    return
-  }
+  const ip = req.socket.remoteAddress!
 
   connectedClients.add(ip)
   Logger.log(`${ip} has connected.`)
@@ -76,6 +70,12 @@ const server = app.listen(9001, () => {
 })
 
 server.on('upgrade', (request: IncomingMessage, socket: Duplex, head: Buffer) => {
+  const error = validateConnection(connectedClients, request.socket.remoteAddress)
+
+  if (error) {
+    request.destroy(new Error(error.message))
+    return
+  }
   wss.handleUpgrade(request, socket, head, (ws: WebSocket) => {
     wss.emit('connection', ws, request)
   })
