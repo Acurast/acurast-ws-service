@@ -11,16 +11,13 @@ import { initSentry } from './init-sentry'
 const app: Express = express()
 const proxy: Proxy = new Proxy()
 const wss = new WebSocket.Server({ noServer: true, clientTracking: true })
-const connectedClients = new Set<string>()
 
 initSentry(app)
 
 wss.on('connection', (ws: WebSocket, req) => {
   ws.binaryType = 'nodebuffer'
 
-  const ip = req.socket.remoteAddress!
-
-  connectedClients.add(ip)
+  const ip = req.headers['x-forwarded-for'] as string
   Logger.log(`${ip} has connected.`)
 
   ws.on('message', (data: WebSocket.RawData) => {
@@ -32,7 +29,7 @@ wss.on('connection', (ws: WebSocket, req) => {
         : undefined
 
     if (bytes !== undefined) {
-      proxy.onMessage(ws, bytes)
+      proxy.onMessage(ip, ws, bytes)
     }
 
     Logger.debug('server', 'ws.message', 'end')
@@ -40,8 +37,7 @@ wss.on('connection', (ws: WebSocket, req) => {
 
   ws.on('close', (code: number, reason: Buffer) => {
     Logger.debug('server', 'ws.close', 'begin')
-    connectedClients.delete(ip)
-    proxy.reset(code, reason.toString('utf-8'), ws)
+    proxy.closeConnection(ip, code, reason.toString('utf-8'))
     Logger.debug('server', 'ws.close', 'end')
   })
 
@@ -70,15 +66,20 @@ const server = app.listen(9001, () => {
 })
 
 server.on('upgrade', (request: IncomingMessage, socket: Duplex, head: Buffer) => {
-  // const error = validateConnection(connectedClients, request.socket.remoteAddress)
+  const ip = request.headers['x-forwarded-for'] as string | undefined
+  const error = proxy.isDuplicatedSession(ip)
 
-  // if (error) {
-  //   request.destroy(new Error(error.message))
-  //   return
-  // }
+  Logger.log('IP', ip)
+  Logger.log('error', error)
 
-  console.log('headers:', request.headers['x-forwarded-for'])
-  console.log('socket:', request.socket.remoteAddress)
+  if (error) {
+    request.destroy(new Error(error.message))
+    // The user potentially can reconnect to a different node.
+    // For this reason, we need to also close the previous session.
+    ip && proxy.closeConnection(ip, 1008, 'Duplicated session detected. Aborting.')
+    return
+  }
+
   wss.handleUpgrade(request, socket, head, (ws: WebSocket) => {
     wss.emit('connection', ws, request)
   })

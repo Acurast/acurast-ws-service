@@ -74,7 +74,7 @@ export class Proxy extends AbstractProxy {
     Logger.debug('Proxy', 'onNetworkMessage', 'end')
   }
 
-  public onMessage(ws: WebSocket, bytes: Buffer) {
+  public onMessage(ip: string, ws: WebSocket, bytes: Buffer) {
     Logger.debug('Proxy', 'onMessage', 'begin')
     const message: Message | undefined = parseMessage(bytes)
     if (message === undefined) {
@@ -98,6 +98,7 @@ export class Proxy extends AbstractProxy {
     Logger.log('Got message', message)
 
     if (message.type === 'init') {
+      this.connectedClients.set(ip, ws)
       this.pendingConnections.set(senderStr, ws)
     }
 
@@ -109,7 +110,16 @@ export class Proxy extends AbstractProxy {
     Logger.debug('Proxy', 'onMessage', 'end')
   }
 
-  public reset(code: number, reason: string, ws: WebSocket): void {
+  closeConnection(ip: string, code: number, reason: string) {
+    if (!this.connectedClients.has(ip)) {
+      return
+    }
+
+    this.reset(code, reason, this.connectedClients.get(ip)!)
+    this.connectedClients.delete(ip)
+  }
+
+  private reset(code: number, reason: string, ws: WebSocket): void {
     Logger.debug('Proxy', 'reset', 'begin')
     const sender: string | undefined = this.webSocketsReversed.get(ws)
     this.webSocketsReversed.delete(ws)

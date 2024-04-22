@@ -3,7 +3,7 @@ const getError = (code: number, message: string) => ({
   message
 })
 
-export const validateConnection = (connectedClients: Set<string>, ipAddr?: string) => {
+export const validateConnection = (connectedClients: Map<string, any>, ipAddr?: string) => {
   if (!ipAddr) {
     return getError(1008, 'No ip address received.')
   }
