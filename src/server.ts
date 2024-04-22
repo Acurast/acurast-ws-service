@@ -70,12 +70,12 @@ const server = app.listen(9001, () => {
 })
 
 server.on('upgrade', (request: IncomingMessage, socket: Duplex, head: Buffer) => {
-  const error = validateConnection(connectedClients, request.socket.remoteAddress)
+  // const error = validateConnection(connectedClients, request.socket.remoteAddress)
 
-  if (error) {
-    request.destroy(new Error(error.message))
-    return
-  }
+  // if (error) {
+  //   request.destroy(new Error(error.message))
+  //   return
+  // }
   wss.handleUpgrade(request, socket, head, (ws: WebSocket) => {
     wss.emit('connection', ws, request)
   })
