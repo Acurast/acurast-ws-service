@@ -24,34 +24,32 @@ import {
 
 export class Proxy extends AbstractProxy {
   protected override processorWorkerHandler(data: ProcessorWorkerResponse | WorkerError): void {
-    {
-      const err = data as WorkerError
+    const err = data as WorkerError
 
-      if (err.error && this.pendingConnections.has(err.message)) {
-        this.pendingConnections.get(err.message)!.close(1011, 'Challenge failed.')
-        this.pendingConnections.delete(err.message)
-        return
-      }
+    if (err.error && this.pendingConnections.has(err.message)) {
+      this.pendingConnections.get(err.message)!.close(1011, 'Challenge failed.')
+      this.pendingConnections.delete(err.message)
+      return
+    }
 
-      const { action, senderId } = data as ProcessorWorkerResponse
+    const { action, senderId } = data as ProcessorWorkerResponse
 
-      const ws = this.webSockets.has(senderId)
-        ? this.webSockets.get(senderId)!
-        : this.pendingConnections.get(senderId)!
+    const ws = this.webSockets.has(senderId)
+      ? this.webSockets.get(senderId)!
+      : this.pendingConnections.get(senderId)!
 
-      switch (action?.type) {
-        case 'register':
-          this.onRegister(action, ws)
-          break
-        case 'respond':
-          this.onRespond(action, ws)
-          break
-        case 'send':
-          this.onSend(action)
-          break
-        default:
-          break
-      }
+    switch (action?.type) {
+      case 'register':
+        this.onRegister(action, ws)
+        break
+      case 'respond':
+        this.onRespond(action, ws)
+        break
+      case 'send':
+        this.onSend(action)
+        break
+      default:
+        break
     }
   }
 
