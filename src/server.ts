@@ -76,6 +76,8 @@ server.on('upgrade', (request: IncomingMessage, socket: Duplex, head: Buffer) =>
   //   request.destroy(new Error(error.message))
   //   return
   // }
+
+  console.log('ip addr:', request.socket.remoteAddress)
   wss.handleUpgrade(request, socket, head, (ws: WebSocket) => {
     wss.emit('connection', ws, request)
   })
