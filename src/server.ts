@@ -6,7 +6,7 @@ import WebSocket, { AddressInfo } from 'ws'
 import { Proxy } from './proxy/proxy'
 import { Logger } from './utils/Logger'
 import { initSentry } from './init-sentry'
-import { validateConnection } from './utils/connection-validator'
+// import { validateConnection } from './utils/connection-validator'
 
 const app: Express = express()
 const proxy: Proxy = new Proxy()
