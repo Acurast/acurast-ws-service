@@ -14,7 +14,6 @@ spec:
       targetPort: 50000
       protocol: TCP
       name: p2p-port
-  externalTrafficPolicy: Local
   type: ClusterIP
   selector:
     app: __NAMESPACE_NAME____INSTANCE_SUFFIX__
