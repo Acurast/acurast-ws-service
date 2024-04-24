@@ -99,6 +99,10 @@ export class Proxy extends AbstractProxy {
 
     if (message.type === 'init') {
       this.pendingConnections.set(senderStr, ws)
+      this.prepareConnectionCleanup(senderStr, () => {
+        this.pendingConnections.delete(senderStr)
+        ws.close(1008, 'The connection timed out.')
+      })
     } else {
       this.websocketsLastMessage.set(ws, Date.now())
     }
@@ -113,8 +117,8 @@ export class Proxy extends AbstractProxy {
 
   reset(code: number, reason: string, ws: WebSocket): void {
     Logger.debug('Proxy', 'reset', 'begin')
-    const sender: string | undefined = this.webSocketsReversed.get(ws)
-    this.webSocketsReversed.delete(ws)
+
+    const sender = this.webSocketsReversed.get(ws)
 
     if (!sender) {
       return
@@ -123,6 +127,7 @@ export class Proxy extends AbstractProxy {
     const details: string = reason.length > 0 ? `${code}: ${reason}` : code.toString()
     Logger.log(sender, `closed connection (${details})`)
 
+    this.webSocketsReversed.delete(ws)
     this.webSockets.delete(sender)
     this.webSocketsData.delete(sender)
     this.websocketsLastMessage.delete(ws)

@@ -107,11 +107,12 @@ export abstract class AbstractProxy {
     Logger.debug('AbstractProxy', 'destroy', 'begin')
   }
 
-  protected prepareConnectionCleanup(sender: string) {
+  protected prepareConnectionCleanup(sender: string, handler?: Function) {
     // cleanup if client doesn't reconnect in time
     this.webSocketsTimeouts.set(
       sender,
       setTimeout(() => {
+        handler && handler()
         MessageScheduler.instance.getAll(sender)
         this.webSocketsTimeouts.delete(sender)
       }, this.timeout)
