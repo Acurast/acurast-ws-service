@@ -53,9 +53,9 @@ export abstract class AbstractProxy {
         continue
       }
 
-      const lastMessage = this.websocketsLastMessage.get(ws)!
+      const lastMessage = this.websocketsLastMessage.get(ws)
 
-      if (ws.readyState !== WebSocket.CLOSED && lastMessage + this.timeout > now) {
+      if (!ws || !lastMessage || lastMessage + 900000 > now) {
         continue
       }
 
