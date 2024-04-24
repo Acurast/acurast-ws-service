@@ -6,12 +6,10 @@ import WebSocket, { AddressInfo } from 'ws'
 import { Proxy } from './proxy/proxy'
 import { Logger } from './utils/Logger'
 import { initSentry } from './init-sentry'
-import { proxyConfigReader } from './proxy-reader'
 
 const app: Express = express()
 const proxy: Proxy = new Proxy()
 const wss = new WebSocket.Server({ noServer: true, clientTracking: true })
-const isDebugMode = proxyConfigReader('debug', false)
 
 initSentry(app)
 
@@ -59,10 +57,10 @@ app.get('/', (_req: Request, res: Response) => {
   res.send('Hello!')
 })
 
-isDebugMode &&
-  app.get('/profiler', (_req: Request, res: Response) => {
-    res.send(proxy.getMemorySnapshot())
-  })
+// DO NOT DELETE, this endpoint enables profiling
+// app.get('/profiler', (_req: Request, res: Response) => {
+//   res.send(proxy.getMemorySnapshot())
+// })
 
 const server = app.listen(9001, () => {
   Logger.log(`Acurast WebSocket Proxy listening on port ${(server.address() as AddressInfo).port}`)
