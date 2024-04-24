@@ -6,19 +6,17 @@ import WebSocket, { AddressInfo } from 'ws'
 import { Proxy } from './proxy/proxy'
 import { Logger } from './utils/Logger'
 import { initSentry } from './init-sentry'
-// import { validateConnection } from './utils/connection-validator'
+import { proxyConfigReader } from './proxy-reader'
 
 const app: Express = express()
 const proxy: Proxy = new Proxy()
 const wss = new WebSocket.Server({ noServer: true, clientTracking: true })
+const isDebugMode = proxyConfigReader('debug', false)
 
 initSentry(app)
 
-wss.on('connection', (ws: WebSocket, req) => {
+wss.on('connection', (ws: WebSocket) => {
   ws.binaryType = 'nodebuffer'
-
-  const ip = req.headers['x-forwarded-for'] as string
-  Logger.log(`${ip} has connected.`)
 
   ws.on('message', (data: WebSocket.RawData) => {
     Logger.debug('server', 'ws.message', 'begin')
@@ -29,7 +27,7 @@ wss.on('connection', (ws: WebSocket, req) => {
         : undefined
 
     if (bytes !== undefined) {
-      proxy.onMessage(ip, ws, bytes)
+      proxy.onMessage(ws, bytes)
     }
 
     Logger.debug('server', 'ws.message', 'end')
@@ -37,7 +35,7 @@ wss.on('connection', (ws: WebSocket, req) => {
 
   ws.on('close', (code: number, reason: Buffer) => {
     Logger.debug('server', 'ws.close', 'begin')
-    proxy.closeConnection(ip, code, reason.toString('utf-8'))
+    proxy.reset(code, reason.toString('utf-8'), ws)
     Logger.debug('server', 'ws.close', 'end')
   })
 
@@ -56,30 +54,21 @@ wss.on('close', () => {
   Logger.debug('server', 'close', 'end')
 })
 
-app.get('/*', (_req: Request, res: Response) => {
+app.get('/', (_req: Request, res: Response) => {
   res.set('access-control-allow-origin', '*')
   res.send('Hello!')
 })
+
+isDebugMode &&
+  app.get('/profiler', (_req: Request, res: Response) => {
+    res.send(proxy.getMemorySnapshot())
+  })
 
 const server = app.listen(9001, () => {
   Logger.log(`Acurast WebSocket Proxy listening on port ${(server.address() as AddressInfo).port}`)
 })
 
 server.on('upgrade', (request: IncomingMessage, socket: Duplex, head: Buffer) => {
-  const ip = request.headers['x-forwarded-for'] as string | undefined
-  const error = proxy.isDuplicatedSession(ip)
-
-  Logger.log('IP', ip)
-  Logger.log('error', error)
-
-  if (error) {
-    request.destroy(new Error(error.message))
-    // The user potentially can reconnect to a different node.
-    // For this reason, we need to also close the previous session.
-    ip && proxy.closeConnection(ip, 1008, 'Duplicated session detected. Aborting.')
-    return
-  }
-
   wss.handleUpgrade(request, socket, head, (ws: WebSocket) => {
     wss.emit('connection', ws, request)
   })

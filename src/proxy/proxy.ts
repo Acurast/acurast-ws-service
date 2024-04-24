@@ -74,7 +74,7 @@ export class Proxy extends AbstractProxy {
     Logger.debug('Proxy', 'onNetworkMessage', 'end')
   }
 
-  public onMessage(ip: string, ws: WebSocket, bytes: Buffer) {
+  onMessage(ws: WebSocket, bytes: Buffer) {
     Logger.debug('Proxy', 'onMessage', 'begin')
     const message: Message | undefined = parseMessage(bytes)
     if (message === undefined) {
@@ -98,8 +98,9 @@ export class Proxy extends AbstractProxy {
     Logger.log('Got message', message)
 
     if (message.type === 'init') {
-      this.connectedClients.set(ip, ws)
       this.pendingConnections.set(senderStr, ws)
+    } else {
+      this.websocketsLastMessage.set(ws, Date.now())
     }
 
     this.pool.postMessage(WorkerType.PROCESSOR, {
@@ -110,16 +111,7 @@ export class Proxy extends AbstractProxy {
     Logger.debug('Proxy', 'onMessage', 'end')
   }
 
-  closeConnection(ip: string, code: number, reason: string) {
-    if (!this.connectedClients.has(ip)) {
-      return
-    }
-
-    this.reset(code, reason, this.connectedClients.get(ip)!)
-    this.connectedClients.delete(ip)
-  }
-
-  private reset(code: number, reason: string, ws: WebSocket): void {
+  reset(code: number, reason: string, ws: WebSocket): void {
     Logger.debug('Proxy', 'reset', 'begin')
     const sender: string | undefined = this.webSocketsReversed.get(ws)
     this.webSocketsReversed.delete(ws)
@@ -133,6 +125,7 @@ export class Proxy extends AbstractProxy {
 
     this.webSockets.delete(sender)
     this.webSocketsData.delete(sender)
+    this.websocketsLastMessage.delete(ws)
     this.pool.postMessage(WorkerType.LISTENER, {
       action: ListenerWorkerAction.UNSUBSCRIBE,
       topic: sender
@@ -150,11 +143,17 @@ export class Proxy extends AbstractProxy {
     Logger.debug('Proxy', 'onRegister', 'begin')
     const sender: string = hexFrom(action.sender)
 
+    if (this.webSockets.has(sender)) {
+      ws.close(1008, 'Sender already registered.')
+      return
+    }
+
     this.removeConnectionCleanup(sender)
 
     this.webSockets.set(sender, ws)
     this.pendingConnections.delete(sender)
     this.webSocketsReversed.set(ws, sender)
+    this.websocketsLastMessage.set(ws, Date.now())
     this.webSocketsData.set(
       sender,
       ConnectionDataInitializer.initialize(action.message as InitMessage)
