@@ -1,6 +1,7 @@
 import { WorkerType } from './worker-types'
 import { Worker } from 'worker_threads'
 import { cpus } from 'os'
+import { Logger } from '../utils/Logger'
 
 export class WorkerPool {
   private readonly pool: Map<WorkerType, Worker[]> = new Map()
@@ -27,6 +28,22 @@ export class WorkerPool {
         const worker = this.generateWorker(key)
 
         worker.on('message', data.handler)
+
+        worker.on('error', (err: any) =>
+          Logger.error(`[Worker PID: ${worker.threadId}]:`, err.message)
+        )
+
+        worker.on('exit', () => {
+          Logger.log(`[Worker PID: ${worker.threadId}]: exiting...`)
+          const index = this.pool.get(key)?.indexOf(worker)
+
+          if (!index || index === -1) {
+            return
+          }
+
+          this.pool.get(key)?.splice(index, 1)
+          Logger.log(`[Worker PID: ${worker.threadId}]: exited.`)
+        })
 
         ref.push(worker)
       }
