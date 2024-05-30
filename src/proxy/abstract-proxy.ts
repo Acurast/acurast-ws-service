@@ -45,23 +45,29 @@ export abstract class AbstractProxy {
   protected abstract onNetworkMessage(message: PeerEvent<Uint8Array>): void
 
   private connectionCleanup = setInterval(() => {
+    const closeWS = (ws: WebSocket) => {
+      if (ws && ws.readyState === ws.OPEN) {
+        ws.close(1008, 'The connection timed out')
+      }
+    }
+
     const now = Date.now()
 
     for (const ws of this.webSocketsReversed.keys()) {
       if (!this.websocketsLastMessage.has(ws)) {
-        ws?.close(1008, 'The connection timed out') // it will trigger reset
+        closeWS(ws)
         continue
       }
 
       const lastMessage = this.websocketsLastMessage.get(ws)
 
       if (!lastMessage) {
-        ws?.close(1008, 'The connection timed out')
+        closeWS(ws)
         continue
       }
 
       if (lastMessage + 900000 <= now) {
-        ws?.close(1008, 'The connection timed out')
+        closeWS(ws)
         continue
       }
     }
