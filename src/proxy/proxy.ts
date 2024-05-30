@@ -27,7 +27,7 @@ export class Proxy extends AbstractProxy {
     const err = data as WorkerError
 
     if (err.error && this.pendingConnections.has(err.message)) {
-      this.pendingConnections.get(err.message)!.close(1011, 'Challenge failed.')
+      this.pendingConnections.get(err.message)?.close(1011, 'Challenge failed.')
       this.pendingConnections.delete(err.message)
       return
     }
@@ -101,7 +101,7 @@ export class Proxy extends AbstractProxy {
       this.pendingConnections.set(senderStr, ws)
       this.prepareConnectionCleanup(senderStr, () => {
         this.pendingConnections.delete(senderStr)
-        ws.close(1008, 'The connection timed out.')
+        ws?.close(1008, 'The connection timed out.')
       })
     } else {
       this.websocketsLastMessage.set(ws, Date.now())
