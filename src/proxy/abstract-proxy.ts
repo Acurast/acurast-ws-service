@@ -49,19 +49,19 @@ export abstract class AbstractProxy {
 
     for (const ws of this.webSocketsReversed.keys()) {
       if (!this.websocketsLastMessage.has(ws)) {
-        ws.close(1008, 'The connection timed out') // it will trigger reset
+        ws?.close(1008, 'The connection timed out') // it will trigger reset
         continue
       }
 
       const lastMessage = this.websocketsLastMessage.get(ws)
 
       if (!lastMessage) {
-        ws.close(1008, 'The connection timed out')
+        ws?.close(1008, 'The connection timed out')
         continue
       }
 
       if (lastMessage + 900000 <= now) {
-        ws.close(1008, 'The connection timed out')
+        ws?.close(1008, 'The connection timed out')
         continue
       }
     }
