@@ -128,10 +128,8 @@ export class Proxy extends AbstractProxy {
     const details: string = reason.length > 0 ? `${code}: ${reason}` : code.toString()
     Logger.log(sender, `closed connection (${details})`)
 
-    this.webSocketsReversed.delete(ws)
-    this.webSockets.delete(sender)
-    this.webSocketsData.delete(sender)
-    this.websocketsLastMessage.delete(ws)
+    this.onReset(sender, ws)
+    
     this.pool.postMessage(WorkerType.LISTENER, {
       action: ListenerWorkerAction.UNSUBSCRIBE,
       topic: sender

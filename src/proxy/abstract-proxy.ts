@@ -45,18 +45,29 @@ export abstract class AbstractProxy {
   protected abstract onNetworkMessage(message: PeerEvent<Uint8Array>): void
 
   private connectionCleanup = setInterval(() => {
-    const closeWS = (ws: WebSocket) => {
+    const closeWS = (
+      ws: WebSocket,
+      code: number = 1008,
+      msg: string = 'The connection timed out'
+    ) => {
       if (ws && ws.readyState === ws.OPEN) {
-        ws.close(1008, 'The connection timed out')
+        ws.close(code, msg)
       }
     }
 
     const now = Date.now()
 
-    for (const ws of this.webSocketsReversed.keys()) {
+    for (const [sender, ws] of this.webSockets.entries()) {
       if (!this.websocketsLastMessage.has(ws)) {
         closeWS(ws)
         continue
+      }
+
+      // validation
+      if (!this.webSocketsReversed.has(ws) || this.webSocketsReversed.get(ws) !== sender) {
+        Logger.log(`Found zombie connection for ${sender}. Resetting...`)
+        this.onReset(sender, ws)
+        closeWS(ws, 1006, 'Connection not freed correctly')
       }
 
       const lastMessage = this.websocketsLastMessage.get(ws)
@@ -115,6 +126,13 @@ export abstract class AbstractProxy {
     clearInterval(this.connectionCleanup)
     this.pool.kill()
     Logger.debug('AbstractProxy', 'destroy', 'begin')
+  }
+
+  protected onReset(sender: string, ws: WebSocket) {
+    this.webSocketsReversed.delete(ws)
+    this.webSockets.delete(sender)
+    this.webSocketsData.delete(sender)
+    this.websocketsLastMessage.delete(ws)
   }
 
   protected prepareConnectionCleanup(sender: string, handler?: Function) {
