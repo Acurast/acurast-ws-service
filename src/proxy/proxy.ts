@@ -118,11 +118,7 @@ export class Proxy extends AbstractProxy {
   reset(code: number, reason: string, ws: WebSocket): void {
     Logger.debug('Proxy', 'reset', 'begin')
 
-    const sender = this.webSocketsReversed.get(ws)
-
-    if (!sender) {
-      return
-    }
+    const sender = this.webSocketsReversed.get(ws)!
 
     const details: string = reason.length > 0 ? `${code}: ${reason}` : code.toString()
     Logger.log(sender, `closed connection (${details})`)
@@ -149,7 +145,7 @@ export class Proxy extends AbstractProxy {
     const sender: string = hexFrom(action.sender)
 
     if (this.webSockets.has(sender)) {
-      ws.close(1008, 'Sender already registered.')
+      this.webSockets.get(sender)?.close(1008, 'New connection received.')
       return
     }
 
