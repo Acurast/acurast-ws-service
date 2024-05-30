@@ -101,7 +101,7 @@ export class Proxy extends AbstractProxy {
       this.pendingConnections.set(senderStr, ws)
       this.prepareConnectionCleanup(senderStr, () => {
         this.pendingConnections.delete(senderStr)
-        ws?.close(1008, 'The connection timed out.')
+        ws.close(1008, 'The connection timed out.')
       })
     } else {
       this.websocketsLastMessage.set(ws, Date.now())
@@ -119,6 +119,11 @@ export class Proxy extends AbstractProxy {
     Logger.debug('Proxy', 'reset', 'begin')
 
     const sender = this.webSocketsReversed.get(ws)!
+
+    if (!sender) {
+      Logger.warn('Proxy', 'reset', 'the connection is already closed')
+      return
+    }
 
     const details: string = reason.length > 0 ? `${code}: ${reason}` : code.toString()
     Logger.log(sender, `closed connection (${details})`)

@@ -18,14 +18,7 @@ export class Logger {
 
     if (prefix === 'begin') {
       this.queue.push({ id, start: performance.now() })
-      log(
-        '[DEBUG]',
-        className,
-        methodName,
-        prefix,
-        ...data,
-        `timestamp = ${Date.now()} ms`
-      )
+      log('[DEBUG]', className, methodName, prefix, ...data, `timestamp = ${Date.now()} ms`)
       return
     }
 
@@ -43,5 +36,9 @@ export class Logger {
 
   static error(...data: any[]): void {
     log('[ERROR]', ...data)
+  }
+
+  static warn(...data: any[]): void {
+    log('[WARNING]', ...data)
   }
 }
