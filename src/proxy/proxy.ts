@@ -129,16 +129,17 @@ export class Proxy extends AbstractProxy {
     Logger.log(sender, `closed connection (${details})`)
 
     this.onReset(sender, ws)
-    
-    this.pool.postMessage(WorkerType.LISTENER, {
-      action: ListenerWorkerAction.UNSUBSCRIBE,
-      topic: sender
-    })
+
     Object.values(this.processors).forEach((processor: MessageProcessor) => {
       void processor.onClosed(Buffer.from(sender, 'hex'))
     })
 
-    this.prepareConnectionCleanup(sender)
+    this.prepareConnectionCleanup(sender, () => {
+      this.pool.postMessage(WorkerType.LISTENER, {
+        action: ListenerWorkerAction.UNSUBSCRIBE,
+        topic: sender
+      })
+    })
 
     Logger.debug('Proxy', 'reset', 'end')
   }
