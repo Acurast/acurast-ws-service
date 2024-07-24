@@ -8,9 +8,12 @@ import { MessageScheduler } from '../scheduler/message-scheduler'
 import { proxyConfigReader } from '../proxy-reader'
 import { ProcessorWorkerResponse, WorkerError, WorkerType } from '../worker/worker-types'
 import { WorkerPool } from '../worker/worker-pool'
+import { Job } from '../jobs/job'
+import { CleanupJob } from '../jobs/cleanup-job/cleanup-job'
 
 export abstract class AbstractProxy {
   private timeout: number = proxyConfigReader('scheduler.interval', 30000)
+
   protected readonly processors: Record<number, MessageProcessor> = {
     1: new V1MessageProcessor()
   }
@@ -20,6 +23,13 @@ export abstract class AbstractProxy {
   protected readonly webSocketsTimeouts: Map<string, NodeJS.Timeout> = new Map()
   protected readonly pendingConnections: Map<string, WebSocket> = new Map()
   protected readonly websocketsLastMessage: Map<WebSocket, number> = new Map()
+
+  private jobs: Job[] = [
+    new CleanupJob(this.webSockets, this.webSocketsReversed, [
+      this.webSocketsTimeouts,
+      this.pendingConnections
+    ])
+  ]
 
   protected readonly pool: WorkerPool = new WorkerPool(
     new Map([
@@ -43,46 +53,6 @@ export abstract class AbstractProxy {
   protected abstract processorWorkerHandler(data: ProcessorWorkerResponse | WorkerError): void
   protected abstract listenerWorkerHandler(data: PeerEvent<Uint8Array> | WorkerError): void
   protected abstract onNetworkMessage(message: PeerEvent<Uint8Array>): void
-
-  private connectionCleanup = setInterval(() => {
-    const closeWS = (
-      ws: WebSocket,
-      code: number = 1008,
-      msg: string = 'The connection timed out'
-    ) => {
-      if (ws && ws.readyState === ws.OPEN) {
-        ws.close(code, msg)
-      }
-    }
-
-    const now = Date.now()
-
-    for (const [sender, ws] of this.webSockets.entries()) {
-      if (!this.websocketsLastMessage.has(ws)) {
-        closeWS(ws)
-        continue
-      }
-
-      // validation
-      if (!this.webSocketsReversed.has(ws) || this.webSocketsReversed.get(ws) !== sender) {
-        Logger.log(`Found zombie connection for ${sender}. Resetting...`)
-        this.onReset(sender, ws)
-        closeWS(ws, 1006, 'Connection not freed correctly')
-      }
-
-      const lastMessage = this.websocketsLastMessage.get(ws)
-
-      if (!lastMessage) {
-        closeWS(ws)
-        continue
-      }
-
-      if (lastMessage + 900000 <= now) {
-        closeWS(ws)
-        continue
-      }
-    }
-  }, 900000) // 15 minutes
 
   getMemorySnapshot() {
     const getLeaks = () => {
@@ -123,7 +93,7 @@ export abstract class AbstractProxy {
 
   destroy() {
     Logger.debug('AbstractProxy', 'destroy', 'begin')
-    clearInterval(this.connectionCleanup)
+    this.jobs.forEach((job) => job.kill())
     this.pool.kill()
     Logger.debug('AbstractProxy', 'destroy', 'begin')
   }
