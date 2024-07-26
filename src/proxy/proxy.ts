@@ -104,7 +104,7 @@ export class Proxy extends AbstractProxy {
         ws.close(1008, 'The connection timed out.')
       })
     } else {
-      this.websocketsLastMessage.set(ws, Date.now())
+      this.websocketsLastMessage.set(hexFrom(message.sender), Date.now())
     }
 
     this.pool.postMessage(WorkerType.PROCESSOR, {
@@ -118,17 +118,18 @@ export class Proxy extends AbstractProxy {
   reset(code: number, reason: string, ws: WebSocket): void {
     Logger.debug('Proxy', 'reset', 'begin')
 
-    const sender = this.webSocketsReversed.get(ws)!
+    const result = Array.from(this.webSockets.entries()).find(([_, value]) => ws === value)
 
-    if (!sender) {
+    if (!result) {
       Logger.warn('Proxy', 'reset', 'the connection is already closed')
       return
     }
 
+    const [sender] = result
     const details: string = reason.length > 0 ? `${code}: ${reason}` : code.toString()
     Logger.log(sender, `closed connection (${details})`)
 
-    this.onReset(sender, ws)
+    this.onReset(sender)
 
     Object.values(this.processors).forEach((processor: MessageProcessor) => {
       void processor.onClosed(Buffer.from(sender, 'hex'))
@@ -157,8 +158,7 @@ export class Proxy extends AbstractProxy {
 
     this.webSockets.set(sender, ws)
     this.pendingConnections.delete(sender)
-    this.webSocketsReversed.set(ws, sender)
-    this.websocketsLastMessage.set(ws, Date.now())
+    this.websocketsLastMessage.set(sender, Date.now())
     this.webSocketsData.set(
       sender,
       ConnectionDataInitializer.initialize(action.message as InitMessage)
@@ -191,6 +191,7 @@ export class Proxy extends AbstractProxy {
     Logger.log('Sending', action.message, 'to', recipient)
 
     if (this.webSockets.has(recipient)) {
+      MessageScheduler.instance.add(recipient, { message: action.message, timestamp: Date.now() })
       this.send(this.webSockets.get(recipient)!, action.message)
     } else {
       this.pool.postMessage(WorkerType.LISTENER, {

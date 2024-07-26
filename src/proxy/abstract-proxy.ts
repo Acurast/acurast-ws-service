@@ -18,17 +18,13 @@ export abstract class AbstractProxy {
     1: new V1MessageProcessor()
   }
   protected readonly webSockets: Map<string, WebSocket> = new Map()
-  protected readonly webSocketsReversed: Map<WebSocket, string> = new Map()
   protected readonly webSocketsData: Map<string, ConnectionData> = new Map()
   protected readonly webSocketsTimeouts: Map<string, NodeJS.Timeout> = new Map()
   protected readonly pendingConnections: Map<string, WebSocket> = new Map()
-  protected readonly websocketsLastMessage: Map<WebSocket, number> = new Map()
+  protected readonly websocketsLastMessage: Map<string, number> = new Map()
 
   private jobs: Job[] = [
-    new CleanupJob(this.webSockets, this.webSocketsReversed, [
-      this.webSocketsTimeouts,
-      this.pendingConnections
-    ])
+    new CleanupJob(this.webSockets, this.websocketsLastMessage, this.webSocketsData)
   ]
 
   protected readonly pool: WorkerPool = new WorkerPool(
@@ -54,39 +50,6 @@ export abstract class AbstractProxy {
   protected abstract listenerWorkerHandler(data: PeerEvent<Uint8Array> | WorkerError): void
   protected abstract onNetworkMessage(message: PeerEvent<Uint8Array>): void
 
-  getMemorySnapshot() {
-    const getLeaks = () => {
-      const result = []
-      for (const [id, ws] of this.webSockets.entries()) {
-        if (!this.webSocketsReversed.has(ws)) {
-          result.push(`${id} is missing from webSocketsReversed`)
-        }
-        if (!this.webSocketsData.has(id)) {
-          result.push(`${id} is missing from webSocketsData`)
-        }
-        if (this.webSocketsTimeouts.has(id)) {
-          result.push(`${id} was not freed from webSocketsTimeouts`)
-        }
-        if (!this.websocketsLastMessage.has(ws)) {
-          result.push(`${id} is missing from websocketsLastMessage`)
-        }
-        if (this.pendingConnections.has(id)) {
-          result.push(`${id} was not freed from pendingConnections`)
-        }
-      }
-
-      return result
-    }
-    return {
-      totalWebSockets: this.webSockets.size,
-      totalReversed: this.webSocketsReversed.size,
-      totalWebsocketsData: this.webSocketsData.size,
-      totalWebSocketsTimeouts: this.webSocketsTimeouts.size,
-      totalPendingConnections: this.pendingConnections.size,
-      leaks: getLeaks()
-    }
-  }
-
   cleanup() {
     MessageScheduler.instance.cleanup()
   }
@@ -98,11 +61,10 @@ export abstract class AbstractProxy {
     Logger.debug('AbstractProxy', 'destroy', 'begin')
   }
 
-  protected onReset(sender: string, ws: WebSocket) {
-    this.webSocketsReversed.delete(ws)
+  protected onReset(sender: string) {
     this.webSockets.delete(sender)
     this.webSocketsData.delete(sender)
-    this.websocketsLastMessage.delete(ws)
+    this.websocketsLastMessage.delete(sender)
   }
 
   protected prepareConnectionCleanup(sender: string, handler?: Function) {

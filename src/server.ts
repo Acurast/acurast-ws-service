@@ -57,11 +57,6 @@ app.get('/', (_req: Request, res: Response) => {
   res.send('Hello!')
 })
 
-// DO NOT DELETE, this endpoint enables profiling
-app.get('/profiler', (_req: Request, res: Response) => {
-  res.send(proxy.getMemorySnapshot())
-})
-
 const server = app.listen(9001, () => {
   Logger.log(`Acurast WebSocket Proxy listening on port ${(server.address() as AddressInfo).port}`)
 })
