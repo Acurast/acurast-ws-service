@@ -68,7 +68,7 @@ app.get('/hasId', (req: Request, res: Response) => {
   const id = req.query['id']?.toString()
 
   if (!id) {
-    return res.status(400).json({ message: 'Missing query parameter: q' })
+    return res.status(400).json({ message: 'Missing query parameter: id' })
   }
 
   res.set('access-control-allow-origin', '*')
