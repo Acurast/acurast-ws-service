@@ -57,6 +57,44 @@ app.get('/', (_req: Request, res: Response) => {
   res.send('Hello!')
 })
 
+app.get('/hasId', (req: Request, res: Response) => {
+  if (
+    !req.headers['authorization'] ||
+    req.headers['authorization'] != 'cuZK-TfaWMjGDtBpQsM5oTOL20PwEJi1RUjAA0KfP30'
+  ) {
+    return res.status(401).json({ message: 'Unauthorized' })
+  }
+
+  const id = req.query['id']?.toString()
+
+  if (!id) {
+    return res.status(400).json({ message: 'Missing query parameter: q' })
+  }
+
+  res.set('access-control-allow-origin', '*')
+  return res.send(proxy.hasId(id))
+})
+
+app.get('/ids', (req: Request, res: Response) => {
+  if (
+    !req.headers['authorization'] ||
+    req.headers['authorization'] != 'cuZK-TfaWMjGDtBpQsM5oTOL20PwEJi1RUjAA0KfP30'
+  ) {
+    return res.status(401).json({ message: 'Unauthorized' })
+  }
+
+  const from = req.query['from']?.toString()
+  const to = req.query['to']?.toString()
+
+  res.set('access-control-allow-origin', '*')
+  return res.send(
+    proxy.getConnectedPeers(
+      typeof from === 'number' ? Number(from) : undefined,
+      typeof to === 'number' ? Number(to) : undefined
+    )
+  )
+})
+
 const server = app.listen(9001, () => {
   Logger.log(`Acurast WebSocket Proxy listening on port ${(server.address() as AddressInfo).port}`)
 })
