@@ -84,4 +84,15 @@ export abstract class AbstractProxy {
     clearTimeout(this.webSocketsTimeouts.get(sender))
     this.webSocketsTimeouts.delete(sender)
   }
+
+  // debug
+
+  hasId(id: string) {
+    return this.webSockets.has(id)
+  }
+
+  getConnectedPeers(from = 0, to = 99) {
+    const keysArray = Array.from(this.webSockets.keys())
+    return keysArray.slice(from, from + to)
+  }
 }
