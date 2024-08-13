@@ -1,4 +1,5 @@
 import express, { type Express, type Request, type Response } from 'express'
+import cors from 'cors'
 import { type IncomingMessage } from 'http'
 import { type Duplex } from 'stream'
 import WebSocket, { AddressInfo } from 'ws'
@@ -10,6 +11,8 @@ import { initSentry } from './init-sentry'
 const app: Express = express()
 const proxy: Proxy = new Proxy()
 const wss = new WebSocket.Server({ noServer: true, clientTracking: true })
+
+app.use(cors())
 
 initSentry(app)
 
@@ -53,14 +56,13 @@ wss.on('close', () => {
 })
 
 app.get('/', (_req: Request, res: Response) => {
-  res.set('access-control-allow-origin', '*')
   res.send('Hello!')
 })
 
 app.get('/hasId', (req: Request, res: Response) => {
   if (
     !req.headers['authorization'] ||
-    req.headers['authorization'] != 'cuZK-TfaWMjGDtBpQsM5oTOL20PwEJi1RUjAA0KfP30'
+    req.headers['authorization'] !== 'cuZK-TfaWMjGDtBpQsM5oTOL20PwEJi1RUjAA0KfP30'
   ) {
     return res.status(401).json({ message: 'Unauthorized' })
   }
@@ -71,14 +73,13 @@ app.get('/hasId', (req: Request, res: Response) => {
     return res.status(400).json({ message: 'Missing query parameter: id' })
   }
 
-  res.set('access-control-allow-origin', '*')
   return res.send(proxy.hasId(id))
 })
 
 app.get('/ids', (req: Request, res: Response) => {
   if (
     !req.headers['authorization'] ||
-    req.headers['authorization'] != 'cuZK-TfaWMjGDtBpQsM5oTOL20PwEJi1RUjAA0KfP30'
+    req.headers['authorization'] !== 'cuZK-TfaWMjGDtBpQsM5oTOL20PwEJi1RUjAA0KfP30'
   ) {
     return res.status(401).json({ message: 'Unauthorized' })
   }
@@ -86,7 +87,6 @@ app.get('/ids', (req: Request, res: Response) => {
   const from = req.query['from']?.toString()
   const to = req.query['to']?.toString()
 
-  res.set('access-control-allow-origin', '*')
   return res.send(
     proxy.getConnectedPeers(
       typeof from === 'number' ? Number(from) : undefined,
