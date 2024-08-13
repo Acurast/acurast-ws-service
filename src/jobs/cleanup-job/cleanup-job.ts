@@ -30,7 +30,7 @@ export class CleanupJob extends AbstractJob {
         continue
       }
 
-      if (this.lastMessage.get(key)! > 600_000) {
+      if (Date.now() - this.lastMessage.get(key)! >= 600_000) {
         Logger.warn(`Connection timed out for entry: ${key}`)
         ws?.close(1008, 'The connection timed out.')
         continue
