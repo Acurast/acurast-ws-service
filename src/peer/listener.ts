@@ -17,6 +17,8 @@ export class Listener extends AbstractPeer {
   protected override async run(): Promise<void> {
     const node = await this.start()
 
+    node.services.pubsub.subscribe('NEW_REGISTRATION')
+
     Logger.log('Listener ready, listening on:')
     node.getMultiaddrs().forEach((addr: any) => Logger.log(addr.toString()))
   }
