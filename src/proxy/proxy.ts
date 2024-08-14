@@ -8,7 +8,7 @@ import {
   type SendProcessorAction,
   type RespondProcessorAction
 } from '../processor/message-processor'
-import { hexFrom, hexTo } from '../utils/bytes'
+import { hexFrom } from '../utils/bytes'
 import Permissions from '../permissions/permissions'
 import { ConnectionDataInitializer } from '../connection-data/connection-data-initializer'
 import { AbstractProxy } from './abstract-proxy'
@@ -65,13 +65,6 @@ export class Proxy extends AbstractProxy {
 
   protected override onNetworkMessage({ id, message }: PeerEvent<Uint8Array>): void {
     Logger.debug('Proxy', 'onNetworkMessage', 'begin')
-    if (id === 'NEW_REGISTRATION') {
-      const sender = hexFrom(message)
-      if (this.webSockets.has(sender)) {
-        this.webSockets.get(sender)?.close(1008, 'New connection received.')
-      }
-      return
-    }
     if (!this.webSockets.has(id)) {
       return
     }
@@ -176,12 +169,6 @@ export class Proxy extends AbstractProxy {
       topic: sender
     })
 
-    this.pool.postMessage(WorkerType.LISTENER, {
-      action: ListenerWorkerAction.PUBLISH,
-      topic: 'NEW_REGISTRATION',
-      message: hexTo(sender)
-    })
-
     if (!action.message) {
       return
     }
@@ -210,7 +197,7 @@ export class Proxy extends AbstractProxy {
       this.pool.postMessage(WorkerType.LISTENER, {
         action: ListenerWorkerAction.PUBLISH,
         topic: recipient,
-        message: forgeMessage(action.message)
+        message: action.message
       })
     }
 
