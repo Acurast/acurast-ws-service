@@ -20,7 +20,7 @@ export enum ListenerWorkerAction {
 export type ListenerWorkerRequest = {
   action: ListenerWorkerAction
   topic: string
-  message?: Uint8Array
+  message?: Message
 }
 
 export type WorkerError = {
