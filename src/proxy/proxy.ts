@@ -220,9 +220,6 @@ export class Proxy extends AbstractProxy {
   private send(ws: WebSocket, message: Message): void {
     Logger.debug('Proxy', 'send', 'begin')
     try {
-      if(!this.webSockets.has(ws)) {
-        ws.close()
-      }
       ws.send(forgeMessage(message))
     } catch (err: any) {
       Logger.error('Sending', message, 'to', message.recipient, 'failed', err.message)
