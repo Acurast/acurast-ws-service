@@ -58,12 +58,8 @@ test:
     - kubectl apply -f k8s/common/ --recursive
 
 .deploy-script-dev:
-  extends: 
-    - .run_dev_rules
+  extends:
     - .deploy-script
-  variables:
-    IMAGE_TAG: $GOOGLE_TAG_DEV
-    DEPLOYMENT_TYPE: "development"
 
 .deploy-script-prod:
   extends: 
