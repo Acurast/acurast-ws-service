@@ -13,6 +13,7 @@ metadata:
   name: __NAMESPACE_NAME____INSTANCE_SUFFIX__
   namespace: __NAMESPACE_NAME__
 spec:
+  ingressClassName: nginx
   rules:
     - host: __NAMESPACE_NAME____INSTANCE_SUFFIX__.dev.cluster.papers.tech 
       http:
