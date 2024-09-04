@@ -1,11 +1,9 @@
 import { forgeMessage, type Message, parseMessage, InitMessage } from '@acurast/transport-websocket'
 import type WebSocket from 'ws'
-import * as Sentry from '@sentry/node'
 
 import {
   type MessageProcessor,
   type RegisterProcessorAction,
-  type SendProcessorAction,
   type RespondProcessorAction
 } from '../processor/message-processor'
 import { hexFrom, hexTo } from '../utils/bytes'
@@ -21,6 +19,7 @@ import {
   WorkerError,
   WorkerType
 } from '../worker/worker-types'
+import { isWSConnectionOpen } from '../utils/ws'
 
 export class Proxy extends AbstractProxy {
   protected override processorWorkerHandler(data: ProcessorWorkerResponse | WorkerError): void {
@@ -35,8 +34,14 @@ export class Proxy extends AbstractProxy {
     const { action, senderId } = data as ProcessorWorkerResponse
 
     const ws = this.webSockets.has(senderId)
-      ? this.webSockets.get(senderId)!
-      : this.pendingConnections.get(senderId)!
+      ? this.webSockets.get(senderId)
+      : this.pendingConnections.get(senderId)
+
+    if (!ws || !isWSConnectionOpen(ws)) {
+      Logger.warn(`${senderId} the connection is closed`)
+      this.onReset(senderId)
+      return
+    }
 
     switch (action?.type) {
       case 'register':
@@ -46,7 +51,7 @@ export class Proxy extends AbstractProxy {
         this.onRespond(action, ws)
         break
       case 'send':
-        this.onSend(action)
+        this.send(ws, action.message)
         break
       default:
         break
@@ -67,11 +72,25 @@ export class Proxy extends AbstractProxy {
     Logger.debug('Proxy', 'onNetworkMessage', 'begin')
     if (id === 'NEW_REGISTRATION') {
       const sender = hexFrom(message)
-      if (this.webSockets.has(sender)) {
-        this.webSockets.get(sender)?.close(1008, 'New connection received.')
+      const ws = this.webSockets.get(sender)
+
+      if (this.webSockets.has(sender) && !isWSConnectionOpen(ws)) {
+        this.onReset(sender)
+        return
       }
+
+      ws?.close(1008, 'New connection received.')
+      MessageScheduler.instance.getAll(sender)?.forEach((msg) =>
+        this.pool.postMessage(WorkerType.LISTENER, {
+          action: ListenerWorkerAction.PUBLISH,
+          topic: sender,
+          message: forgeMessage(msg.message)
+        })
+      )
+
       return
     }
+
     if (!this.webSockets.has(id)) {
       return
     }
@@ -100,6 +119,10 @@ export class Proxy extends AbstractProxy {
     ) {
       Logger.log('Access denied.')
       return
+    }
+
+    if (!ws.isPaused && this.limiter.limitRequest(ws)) {
+      Logger.warn(`${senderStr} is sending too many messages. Suspending...`)
     }
 
     Logger.log('Got message', message)
@@ -157,7 +180,10 @@ export class Proxy extends AbstractProxy {
     const sender: string = hexFrom(action.sender)
 
     if (this.webSockets.has(sender)) {
-      this.webSockets.get(sender)?.close(1008, 'New connection received.')
+      const oldConnection = this.webSockets.get(sender)
+      isWSConnectionOpen(oldConnection)
+        ? oldConnection?.close(1008, 'New connection received.')
+        : this.onReset(sender)
     }
 
     this.removeConnectionCleanup(sender)
@@ -192,40 +218,24 @@ export class Proxy extends AbstractProxy {
 
   private onRespond(action: RespondProcessorAction, ws: WebSocket): void {
     Logger.debug('Proxy', 'onRespond', 'begin')
-    this.send(ws, action.message)
+    ws?.send(forgeMessage(action.message))
     Logger.debug('Proxy', 'onRespond', 'end')
-  }
-
-  private onSend(action: SendProcessorAction): void {
-    Logger.debug('Proxy', 'onSend', 'begin')
-    const recipient: string = hexFrom(action.message.recipient)
-
-    Logger.log('Sending', action.message, 'to', recipient)
-
-    if (this.webSockets.has(recipient)) {
-      MessageScheduler.instance.add(recipient, { message: action.message, timestamp: Date.now() })
-      this.send(this.webSockets.get(recipient)!, action.message)
-    } else {
-      this.pool.postMessage(WorkerType.LISTENER, {
-        action: ListenerWorkerAction.PUBLISH,
-        topic: recipient,
-        message: forgeMessage(action.message)
-      })
-    }
-
-    Logger.log('Sent', action.message, 'to', recipient, 'successfully')
-    Logger.debug('Proxy', 'onSend', 'end')
   }
 
   private send(ws: WebSocket, message: Message): void {
     Logger.debug('Proxy', 'send', 'begin')
-    try {
-      ws.send(forgeMessage(message))
-    } catch (err: any) {
-      Logger.error('Sending', message, 'to', message.recipient, 'failed', err.message)
-      this.prepareConnectionCleanup(hexFrom(message.sender))
-      Sentry.captureException(err)
+    const recipient = hexFrom(message.recipient)
+    const parsed = forgeMessage(message)
+
+    if (this.webSockets.has(recipient)) {
+      MessageScheduler.instance.add(recipient, { message, timestamp: Date.now() })
+      ws?.send(parsed)
+    } else {
+      this.pool.postMessage(WorkerType.LISTENER, {
+        action: ListenerWorkerAction.PUBLISH,
+        topic: recipient,
+        message: parsed
+      })
     }
-    Logger.debug('Proxy', 'send', 'end')
   }
 }

@@ -10,6 +10,7 @@ import { ProcessorWorkerResponse, WorkerError, WorkerType } from '../worker/work
 import { WorkerPool } from '../worker/worker-pool'
 import { Job } from '../jobs/job'
 import { CleanupJob } from '../jobs/cleanup-job/cleanup-job'
+import { RateLimiter } from '../rate-limiter/rate-limiter'
 
 export abstract class AbstractProxy {
   private timeout: number = proxyConfigReader('scheduler.interval', 30000)
@@ -22,11 +23,9 @@ export abstract class AbstractProxy {
   protected readonly webSocketsTimeouts: Map<string, NodeJS.Timeout> = new Map()
   protected readonly pendingConnections: Map<string, WebSocket> = new Map()
   protected readonly websocketsLastMessage: Map<string, number> = new Map()
-
   private jobs: Job[] = [
     new CleanupJob(this.webSockets, this.websocketsLastMessage, this.webSocketsData)
   ]
-
   protected readonly pool: WorkerPool = new WorkerPool(
     new Map([
       [
@@ -45,6 +44,7 @@ export abstract class AbstractProxy {
       ]
     ])
   )
+  protected readonly limiter: RateLimiter = new RateLimiter(1000, 10000)
 
   protected abstract processorWorkerHandler(data: ProcessorWorkerResponse | WorkerError): void
   protected abstract listenerWorkerHandler(data: PeerEvent<Uint8Array> | WorkerError): void
