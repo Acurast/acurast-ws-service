@@ -14,7 +14,7 @@ metadata:
   namespace: __NAMESPACE_NAME__
 spec:
   rules:
-    - host: __NAMESPACE_NAME____INSTANCE_SUFFIX__.dev.gke.acurast.com
+    - host: __NAMESPACE_NAME____INSTANCE_SUFFIX__.dev.cluster.papers.tech 
       http:
         paths:
           - backend:
@@ -26,5 +26,5 @@ spec:
             pathType: Prefix
   tls:
     - hosts:
-        - __NAMESPACE_NAME____INSTANCE_SUFFIX__.dev.gke.acurast.com
+        - __NAMESPACE_NAME____INSTANCE_SUFFIX__.dev.cluster.papers.tech 
       secretName: __NAMESPACE_NAME____INSTANCE_SUFFIX__-tls

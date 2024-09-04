@@ -14,13 +14,13 @@ include:
   - project: "papers/acurast/acurast-infra"
     file: "/.base-gitlab-ci.yml"
   - component: gitlab.papers.tech/papers/papers-internal/ci-cd-components/build-image@v0.0.40
-  - component: gitlab.papers.tech/papers/papers-internal/ci-cd-components/k8s-publish-dev@v0.0.40
+  - component: gitlab.papers.tech/papers/papers-internal/ci-cd-components/publish-local-registry@v0.0.44
   - component: gitlab.papers.tech/papers/papers-internal/ci-cd-components/k8s-publish-prod@v0.0.40
-  - component: gitlab.papers.tech/papers/papers-internal/ci-cd-components/k8s-deploy-dev@v0.0.40
+  - component: gitlab.papers.tech/papers/papers-internal/ci-cd-components/deploy-self-hosted-dev@v0.0.44
     inputs:
       environment: "development/1"
       extends_script: ".deploy-script-dev"
-  - component: gitlab.papers.tech/papers/papers-internal/ci-cd-components/k8s-deploy-dev@v0.0.40
+  - component: gitlab.papers.tech/papers/papers-internal/ci-cd-components/deploy-self-hosted-dev@v0.0.44
     inputs:
       environment: "development/2"
       extends_script: ".deploy-script-dev"
