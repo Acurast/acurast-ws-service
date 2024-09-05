@@ -44,7 +44,7 @@ test:
     # seds
     - find k8s -type f -name \*.yaml -exec sed -i "s|__NAMESPACE_NAME__|"$NAMESPACE"|g" {} +
     - find k8s -type f -name \*.yaml -exec sed -i "s|__INSTANCE_SUFFIX__|"$INSTANCE_SUFFIX"|g" {} +
-    - find k8s -type f -name \*.yaml -exec sed -i "s|__TO_BE_REPLACED_BY_IMAGE_TAG__|"$CI_REGISTRY_IMAGE:$CI_COMMIT_SHA"|g" {} +
+    - find k8s -type f -name \*.yaml -exec sed -i "s|__TO_BE_REPLACED_BY_IMAGE_TAG__|"$IMAGE_TAG:$CI_COMMIT_SHA"|g" {} +
     - find k8s -type f -name \*.yaml -exec sed -i "s|__PEER_ID__|"$PEER_ID"|g" {} +
     - find k8s -type f -name \*.yaml -exec sed -i "s|__PEER_PRIVATE_KEY__|"$PEER_PRIVATE_KEY"|g" {} +
     - find k8s -type f -name \*.yaml -exec sed -i "s|__PEER_PUBLIC_KEY__|"$PEER_PUBLIC_KEY"|g" {} +
@@ -60,7 +60,9 @@ test:
 .deploy-script-dev:
   extends:
     - .deploy-script
-
+  variables:
+    IMAGE_TAG: $CI_REGISTRY_IMAGE
+    DEPLOYMENT_TYPE: "development"
 .deploy-script-prod:
   extends: 
     - .run_prod_rules
