@@ -180,10 +180,8 @@ export class Proxy extends AbstractProxy {
     const sender: string = hexFrom(action.sender)
 
     if (this.webSockets.has(sender)) {
-      const oldConnection = this.webSockets.get(sender)
-      isWSConnectionOpen(oldConnection)
-        ? oldConnection?.close(1008, 'New connection received.')
-        : this.onReset(sender)
+      Logger.warn(`${sender} is registering again.`)
+      this.onReset(sender)
     }
 
     this.removeConnectionCleanup(sender)
