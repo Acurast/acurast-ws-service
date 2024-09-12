@@ -51,7 +51,7 @@ export class Proxy extends AbstractProxy {
         this.onRespond(action, ws)
         break
       case 'send':
-        this.send(ws, action.message)
+        this.send(action.message)
         break
       default:
         break
@@ -209,8 +209,8 @@ export class Proxy extends AbstractProxy {
       return
     }
 
-    this.send(ws, action.message)
-    MessageScheduler.instance.getAll(sender)?.forEach((msg) => this.send(ws, msg.message))
+    this.send(action.message)
+    MessageScheduler.instance.getAll(sender)?.forEach((msg) => this.send(msg.message))
     Logger.debug('Proxy', 'onRegister', 'end')
   }
 
@@ -220,14 +220,15 @@ export class Proxy extends AbstractProxy {
     Logger.debug('Proxy', 'onRespond', 'end')
   }
 
-  private send(ws: WebSocket, message: Message): void {
+  private send(message: Message): void {
     Logger.debug('Proxy', 'send', 'begin')
     const recipient = hexFrom(message.recipient)
     const parsed = forgeMessage(message)
+    const socket = this.webSockets.get(recipient)
 
-    if (this.webSockets.has(recipient)) {
+    if (socket) {
       MessageScheduler.instance.add(recipient, { message, timestamp: Date.now() })
-      ws?.send(parsed)
+      socket.send(parsed)
     } else {
       this.pool.postMessage(WorkerType.LISTENER, {
         action: ListenerWorkerAction.PUBLISH,
