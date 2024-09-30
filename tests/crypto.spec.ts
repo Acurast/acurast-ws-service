@@ -1,33 +1,30 @@
-/* eslint-disable @typescript-eslint/no-unused-expressions */
-import { expect } from 'chai'
+import { Crypto } from '../src/crypto'
 
-import { Crypto } from '../../src/crypto'
-
-describe('Crypto', function() {
-  it('creates random bytes', function() {
+describe('Crypto', function () {
+  it('creates random bytes', function () {
     const size: number = 16
 
     const crypto = new Crypto()
     const a: Buffer = crypto.getRandomValues(size)
     const b: Buffer = crypto.getRandomValues(size)
 
-    expect(a.length).eq(size)
-    expect(b.length).eq(size)
-    expect(a.toString('hex')).not.eq(b.toString('hex'))
+    expect(a.length).toBe(size)
+    expect(b.length).toBe(size)
+    expect(a.toString('hex')).not.toBe(b.toString('hex'))
   })
 
-  it('creates SHA-256 hash', function() {
+  it('creates SHA-256 hash', function () {
     const data: Buffer = Buffer.from('90cace2932470ec1af20c53ae24abfce', 'hex')
 
     const crypto = new Crypto()
     const hash: Buffer = crypto.sha256(data)
 
-    expect(hash.toString('hex')).eq(
+    expect(hash.toString('hex')).toBe(
       '1fe2cb1a03f0d66b31da77084822e5b3d9d7460c017a90d870ca5c5c30fa1783'
     )
   })
 
-  it('verifies a valid P-256 signature', function() {
+  it('verifies a valid P-256 signature', function () {
     const data: Buffer = Buffer.from(
       'bb67a3ba9ac64fb89ab480f634755f0d92c263f980b8705dbb24b3010a3b1e69',
       'hex'
@@ -44,10 +41,10 @@ describe('Crypto', function() {
     const crypto = new Crypto()
     const verified: boolean = crypto.verifyP256(data, signature, publicKey)
 
-    expect(verified).to.be.true
+    expect(verified).toBe(true)
   })
 
-  it('verifies an invalid P-256 signature', function() {
+  it('verifies an invalid P-256 signature', function () {
     const data: Buffer = Buffer.from(
       'bb67a3ba9ac64fb89ab480f634755f0d92c263f980b8705dbb24b3010a3b1e69',
       'hex'
@@ -64,6 +61,6 @@ describe('Crypto', function() {
     const crypto = new Crypto()
     const verified: boolean = crypto.verifyP256(data, signature, publicKey)
 
-    expect(verified).to.be.false
+    expect(verified).toBe(false)
   })
 })
