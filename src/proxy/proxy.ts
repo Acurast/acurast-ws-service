@@ -118,6 +118,7 @@ export class Proxy extends AbstractProxy {
       )
     ) {
       Logger.log('Access denied.')
+      ws.close(1008, 'Access denied.')
       return
     }
 
@@ -209,8 +210,8 @@ export class Proxy extends AbstractProxy {
       return
     }
 
-    this.send(action.message)
-    MessageScheduler.instance.getAll(sender)?.forEach((msg) => this.send(msg.message))
+    ws.send(forgeMessage(action.message))
+    MessageScheduler.instance.getAll(sender)?.forEach((msg) => ws.send(forgeMessage(msg.message)))
     Logger.debug('Proxy', 'onRegister', 'end')
   }
 

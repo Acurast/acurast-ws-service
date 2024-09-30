@@ -11,28 +11,24 @@ import {
   type ResponseMessage,
   createResponseMessage
 } from '@acurast/transport-websocket'
-import chai, { expect } from 'chai'
-import chaiAsPromised from 'chai-as-promised'
 import { stub } from 'sinon'
 
-import { Crypto } from '../../../src/crypto'
+import { Crypto } from '../src/crypto'
 import {
   type RespondProcessorAction,
   type ProcessorAction,
   type SendProcessorAction,
   type RegisterProcessorAction
-} from '../../../src/processor/message-processor'
+} from '../src/processor/message-processor'
 import {
   CHALLENGE_LENGTH,
   DEFAULT_DIFFICULTY,
   V1MessageProcessor,
   V1MessageVerifier
-} from '../../../src/processor/v1-message-processor'
+} from '../src/processor/v1-message-processor'
 
-chai.use(chaiAsPromised)
-
-describe('V1MessageProcessor', function() {
-  it('processes InitMessage', async function() {
+describe('V1MessageProcessor', function () {
+  test('processes InitMessage', async function () {
     const sender: Buffer = Buffer.from('ec7b5e7926d2de5fce52fcc220f23ca6', 'hex')
     const initMessage: InitMessage = createInitMessage(sender)
 
@@ -40,19 +36,19 @@ describe('V1MessageProcessor', function() {
     const actionOrUndefined: ProcessorAction | undefined =
       await processor.processMessage(initMessage)
 
-    expect(actionOrUndefined).not.to.be.undefined
-    expect(actionOrUndefined!.type).to.eq('respond')
+    expect(actionOrUndefined).toBeTruthy()
+    expect(actionOrUndefined!.type).toBe('respond')
     const action: RespondProcessorAction = actionOrUndefined as RespondProcessorAction
 
-    expect(action.message).not.to.be.undefined
-    expect(action.message.type).to.eq('challenge')
+    expect(action.message).toBeTruthy()
+    expect(action.message.type).toBe('challenge')
     const challengeMessage: ChallengeMessage = action.message as ChallengeMessage
 
-    expect(challengeMessage.recipient).to.eq(sender)
-    expect(challengeMessage.challenge.length).to.eq(CHALLENGE_LENGTH)
+    expect(challengeMessage.recipient).toBe(sender)
+    expect(challengeMessage.challenge.length).toBe(CHALLENGE_LENGTH)
   })
 
-  it('processes ChallengeMessage', async function() {
+  test('processes ChallengeMessage', async function () {
     const recipient: Buffer = Buffer.from('1ef057a3f77d03aa7c067dd113c9410b', 'hex')
     const challengeMessage: ChallengeMessage = createChallengeMessage(
       recipient,
@@ -64,10 +60,10 @@ describe('V1MessageProcessor', function() {
     const actionOrUndefined: ProcessorAction | undefined =
       await processor.processMessage(challengeMessage)
 
-    expect(actionOrUndefined).to.be.undefined
+    expect(actionOrUndefined).toBe(undefined)
   })
 
-  it('processes valid ResponseMessage', async function() {
+  test('processes valid ResponseMessage', async function () {
     const sender: Buffer = Buffer.from('1ef057a3f77d03aa7c067dd113c9410b', 'hex')
     const challenge: Buffer = Buffer.from('ee31dab8fa052a68d59feac6a7236f8c', 'hex')
     const publicKey: Buffer = Buffer.from(
@@ -94,14 +90,14 @@ describe('V1MessageProcessor', function() {
     const actionOrUndefined: ProcessorAction | undefined =
       await processor.processMessage(responseMessage)
 
-    expect(actionOrUndefined).not.to.be.undefined
-    expect(actionOrUndefined!.type).to.eq('register')
+    expect(actionOrUndefined).toBeTruthy()
+    expect(actionOrUndefined!.type).toBe('register')
     const action: RegisterProcessorAction = actionOrUndefined as RegisterProcessorAction
 
-    expect(action.sender).to.eq(sender)
+    expect(action.sender).toBe(sender)
   })
 
-  it('processes invalid ResponseMessage', async function() {
+  test('processes invalid ResponseMessage', async function () {
     const sender: Buffer = Buffer.from('1ef057a3f77d03aa7c067dd113c9410b', 'hex')
     const challenge: Buffer = Buffer.from('5f77637866fc7fed66eeafb3856dab94', 'hex')
     const publicKey: Buffer = Buffer.from(
@@ -128,10 +124,10 @@ describe('V1MessageProcessor', function() {
     const actionOrUndefined: ProcessorAction | undefined =
       await processor.processMessage(responseMessage)
 
-    expect(actionOrUndefined).to.be.undefined
+    expect(actionOrUndefined).toBe(undefined)
   })
 
-  it('processes AcceptedMessage', async function() {
+  test('processes AcceptedMessage', async function () {
     const recipient: Buffer = Buffer.from('1ef057a3f77d03aa7c067dd113c9410b', 'hex')
     const acceptedMessage: AcceptedMessage = createAcceptedMessage(recipient)
 
@@ -139,10 +135,10 @@ describe('V1MessageProcessor', function() {
     const actionOrUndefined: ProcessorAction | undefined =
       await processor.processMessage(acceptedMessage)
 
-    expect(actionOrUndefined).to.be.undefined
+    expect(actionOrUndefined).toBe(undefined)
   })
 
-  it('processes PayloadMessage', async function() {
+  test('processes PayloadMessage', async function () {
     const sender: Buffer = Buffer.from('1ef057a3f77d03aa7c067dd113c9410b', 'hex')
     const recipient: Buffer = Buffer.from('60f4e3122fc04ca961a3bf4d8639860c', 'hex')
     const payload: Buffer = Buffer.from('90cace2932470ec1af20c53ae24abfce', 'hex')
@@ -152,15 +148,15 @@ describe('V1MessageProcessor', function() {
     const actionOrUndefined: ProcessorAction | undefined =
       await processor.processMessage(payloadMessage)
 
-    expect(actionOrUndefined).not.to.be.undefined
-    expect(actionOrUndefined!.type).to.eq('send')
+    expect(actionOrUndefined).toBeTruthy()
+    expect(actionOrUndefined!.type).toBe('send')
     const action: SendProcessorAction = actionOrUndefined as SendProcessorAction
 
-    expect(action.message).to.deep.eq(payloadMessage)
+    expect(action.message).toEqual(payloadMessage)
   })
 
-  describe('V1MessageVerifier', function() {
-    it('verifies valid challenge', async function() {
+  describe('V1MessageVerifier', function () {
+    test('verifies valid challenge', async function () {
       const sender: Buffer = Buffer.from('1ef057a3f77d03aa7c067dd113c9410b', 'hex')
       const challenge: Buffer = Buffer.from('ee31dab8fa052a68d59feac6a7236f8c', 'hex')
       const publicKey: Buffer = Buffer.from(
@@ -182,10 +178,10 @@ describe('V1MessageProcessor', function() {
 
       const verifier: V1MessageVerifier = new V1MessageVerifier()
 
-      await expect(verifier.verifyChallenge(challenge, responseMessage)).to.not.be.rejected
+      await expect(verifier.verifyChallenge(challenge, responseMessage)).resolves.toBe(undefined)
     })
 
-    it('verifies invalid challenge (challenge mismatch)', async function() {
+    test('verifies invalid challenge (challenge mismatch)', async function () {
       const sender: Buffer = Buffer.from('1ef057a3f77d03aa7c067dd113c9410b', 'hex')
       const challenge: Buffer = Buffer.from('5f77637866fc7fed66eeafb3856dab94', 'hex')
       const publicKey: Buffer = Buffer.from(
@@ -212,10 +208,10 @@ describe('V1MessageProcessor', function() {
           Buffer.from('ee31dab8fa052a68d59feac6a7236f8c', 'hex'),
           responseMessage
         )
-      ).to.be.rejected
+      ).rejects.toBeTruthy()
     })
 
-    it('verifies invalid challenge (invalid public key)', async function() {
+    test('verifies invalid challenge (invalid public key)', async function () {
       const sender: Buffer = Buffer.from('1ef057a3f77d03aa7c067dd113c9410b', 'hex')
       const challenge: Buffer = Buffer.from('5f77637866fc7fed66eeafb3856dab94', 'hex')
       const publicKey: Buffer = Buffer.from(
@@ -237,10 +233,10 @@ describe('V1MessageProcessor', function() {
 
       const verifier: V1MessageVerifier = new V1MessageVerifier()
 
-      await expect(verifier.verifyChallenge(challenge, responseMessage)).to.be.rejected
+      await expect(verifier.verifyChallenge(challenge, responseMessage)).rejects.toBeTruthy()
     })
 
-    it('verifies invalid challenge (invalid signature)', async function() {
+    test('verifies invalid challenge (invalid signature)', async function () {
       const sender: Buffer = Buffer.from('1ef057a3f77d03aa7c067dd113c9410b', 'hex')
       const challenge: Buffer = Buffer.from('ee31dab8fa052a68d59feac6a7236f8c', 'hex')
       const publicKey: Buffer = Buffer.from(
@@ -262,7 +258,7 @@ describe('V1MessageProcessor', function() {
 
       const verifier: V1MessageVerifier = new V1MessageVerifier()
 
-      await expect(verifier.verifyChallenge(challenge, responseMessage)).to.be.rejected
+      await expect(verifier.verifyChallenge(challenge, responseMessage)).rejects.toBeTruthy()
     })
   })
 })

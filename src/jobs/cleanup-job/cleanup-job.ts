@@ -2,6 +2,7 @@ import WebSocket from 'ws'
 import { AbstractJob } from '../abstract-job'
 import { Logger } from '../../utils/Logger'
 import { ConnectionData } from '../../connection-data/connection-data'
+import { isWSConnectionOpen } from '../../utils/ws'
 
 export class CleanupJob extends AbstractJob {
   protected override scheduledTime: string = '0 * * * *'
@@ -24,7 +25,7 @@ export class CleanupJob extends AbstractJob {
     const validationSet = new Set()
 
     for (const [key, ws] of this.source.entries()) {
-      if (!ws || !this.lastMessage.has(key) || validationSet.has(ws)) {
+      if (!ws || !this.lastMessage.has(key) || validationSet.has(ws) || isWSConnectionOpen(ws)) {
         Logger.warn(`Memory leak detected. Deleting entry ${key}`)
         this.free(key)
         continue
