@@ -189,7 +189,6 @@ export class Proxy extends AbstractProxy {
     this.removeConnectionCleanup(sender)
 
     this.webSockets.set(sender, ws)
-    ws.close()
     this.pendingConnections.delete(sender)
     this.websocketsLastMessage.set(sender, Date.now())
     this.webSocketsData.set(
