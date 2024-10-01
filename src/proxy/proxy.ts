@@ -74,8 +74,9 @@ export class Proxy extends AbstractProxy {
       const sender = hexFrom(message)
       const ws = this.webSockets.get(sender)
 
-      if (this.webSockets.has(sender) && !isWSConnectionOpen(ws)) {
+      if (this.webSockets.has(sender)) {
         this.onReset(sender)
+        ws?.close(1008, 'The client has registered on a different instance.')
         return
       }
 
@@ -188,6 +189,7 @@ export class Proxy extends AbstractProxy {
     this.removeConnectionCleanup(sender)
 
     this.webSockets.set(sender, ws)
+    ws.close()
     this.pendingConnections.delete(sender)
     this.websocketsLastMessage.set(sender, Date.now())
     this.webSocketsData.set(

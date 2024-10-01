@@ -25,7 +25,7 @@ export class CleanupJob extends AbstractJob {
     const validationSet = new Set()
 
     for (const [key, ws] of this.source.entries()) {
-      if (!ws || !this.lastMessage.has(key) || validationSet.has(ws) || isWSConnectionOpen(ws)) {
+      if (!ws || !this.lastMessage.has(key) || validationSet.has(ws) || !isWSConnectionOpen(ws)) {
         Logger.warn(`Memory leak detected. Deleting entry ${key}`)
         this.free(key)
         continue
