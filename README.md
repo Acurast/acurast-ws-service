@@ -1,25 +1,29 @@
-# websocket_proxy
+# Acurast Websocket Service
 
+## Run
 
-## Infrastructure
+```bash
+yarn start
+```
 
-### updating servers
-There are gitlab-ci jobs to update each server individually.
+or
 
-### adding new servers
-- create the needed values (private key, public key and node id)
-- add them to the inventory.yaml (vault password in gitlab ci vars)
-  - `ansible-vault edit infra/inventory.yaml` https://docs.ansible.com/ansible/latest/cli/ansible-vault.html
-- ensure ssh access to the servers is allowed (and the ports are open)
-  - steps needed in gcp
-    - set root password `sudo passwd`
-    - vim /etc/ssh/sshd_config
-      ```
-        # set
-        PermitRootLogin yes
-        PasswordAuthentication yes
-        ```
-    - `service ssh restart`
-    - ensure ports 50000 and 9001 are open
-    - set static ip
-    
+```bash
+yarn start:prod
+```
+
+## Configuration
+
+See config file [acurast.proxy.config.json](./src/acurast.proxy.config.json) for P2P configs.
+
+The `peerId` settings in the config are set to development values that should be replaced for real deployments.
+
+## Websocket port
+
+The websocket port is set to `9001` in [server.ts](./src/server.ts).
+
+## Docker build
+
+```bash
+docker build .
+```
